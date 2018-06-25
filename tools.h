@@ -1,24 +1,27 @@
   static const int MAX_COUNT = 3;
   static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
 
+  // ↑64からだとstackとか表示されて止まってしまう
+
+
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024
   
-  // データ総容量 456バイト
+  // データ総容量 488バイト
   
   // データ情報   8バイト
   // hash（FNV-1E） => unsigned long型　4 byte (32bit）
   // cnt (0to9.. 送信失敗した場合は最大25まで) => unsigned short型　2 byte (16bit）65535まで
   
-  // データ本体   20バイト x 25 = 500バイト
-  // epoch（UNIXTIME） => time_t型　4 byte
+  // データ本体   24バイト x 20 = 480バイト (512-8-4=500バイトまでしか使用できないため)
+  // epoch （UNIXTIME マイクロ秒まで） => timeval型　8 byte (time_t 4byte + suseconds_t 4byte) (ミリ秒まで知りたいのでマイクロ秒も保持)
   // crc（-40.0 to 80.0）=> boolean型 1byte
   // temp（-40.0 to 80.0）=> float型 4 byte
   // humid（0 to 99.9）=> float型 4 byte
   // lum（0 to 1024）unsigned short型 2 byte 65535まで
 
 struct Data {
-  time_t epoch;
+  timeval epoch;
   bool crc;
   float temp;
   float humid;
@@ -27,7 +30,7 @@ struct Data {
 struct Hyakuyo{
   unsigned long int hash;
   unsigned short cnt;
-  struct Data data[25];
+  struct Data data[20];
 };
 struct Hyakuyo hyakuyo;
 
@@ -109,13 +112,16 @@ String URLEncode(const char* msg) {
 }
 
   void rtcInit(struct Hyakuyo *hyakuyo){
+
+  //Serial.println("\nデータのサイズ" + String(sizeof(hyakuyo->data)) + "\n");
+  //Serial.println("\nデータのサイズ" + String(sizeof(struct Data)) + "\n");
   
-    //struct Hyakuyo _hyakuyo;
-    
+  int data_size = sizeof(hyakuyo->data) / sizeof(struct Data);
     hyakuyo->hash = 0;
     hyakuyo->cnt = 0;
-    for (int i = 0; i < 25; i++) {
-      hyakuyo->data[i].epoch = 0;
+    for (int i = 0; i < data_size; i++) {
+      hyakuyo->data[i].epoch.tv_sec = 0;
+      hyakuyo->data[i].epoch.tv_usec = 0;
       hyakuyo->data[i].crc = false;
       hyakuyo->data[i].temp = 0;
       hyakuyo->data[i].humid = 0;
@@ -139,12 +145,12 @@ String URLEncode(const char* msg) {
       for (int i = 0; i <= _hyakuyo.cnt; i++) {
   
         char datetime[50];
-        tm = localtime(&_hyakuyo.data[i].epoch);
+        tm = localtime(&_hyakuyo.data[i].epoch.tv_sec);
         // “YYYY-MM-DD HH:mm:ss.sss”
         //strftime(buf,sizeof(datetime), "%Y-%m-%d %H:%M:%S.%3N", tm);
         strftime(datetime,sizeof(datetime), "%F %T.%3N", tm);
   
-        //Serial.println("フォーマット前の日付は" + String(_hyakuyo.data[i].epoch) + "です。");  
+        //Serial.println("フォーマット前の日付は" + String(_hyakuyo.data[i].epoch.tv_sec) + "です。");
         /*
         sprintf(datetime, "%04d/%02d/%02d %02d:%02d:%02d\n",
                   tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
@@ -155,7 +161,7 @@ String URLEncode(const char* msg) {
        
         sprintf(buf, "\t【%d回目】ISO8601:%s, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
           i+1,
-          //_hyakuyo.data[i].epoch,
+          //_hyakuyo.data[i].epoch.tv_sec,
           datetime,
           (_hyakuyo.data[i].crc ? "true" : "false"),
           _hyakuyo.data[i].temp,

@@ -42,7 +42,7 @@ void setup() {
         hyakuyo.cnt++;
       }
     } else {
-      Serial.println("※※※ system_rtc_mem_read faild ※※※");
+      Serial.println("\n※※※ system_rtc_mem_read faild ※※※");
       hyakuyo.cnt = 0;
     }
   }
@@ -73,16 +73,16 @@ void setup() {
   configTime(JST, 0, NTP1, NTP2);
   delay(500);
 
-  //time_t epoch;
+  //time_t epoch.tv_sec;
   struct tm *tm;
   static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
   Serial.println("\n【data型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt])) + " バイトです。】\n");
   Serial.println("\n【hyakuyo " + String(sizeof(hyakuyo)) + " バイトです。】\n");
-  Serial.println("\n【time_t型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].epoch)) + " バイトです。】\n");
+  Serial.println("\n【timeval型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].epoch)) + " バイトです。】\n");
   Serial.println("\n【boolean型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].crc)) + " バイトです。】\n");
-  hyakuyo.data[hyakuyo.cnt].epoch = time(NULL);
-  tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch);
-  Serial.println(String(hyakuyo.data[hyakuyo.cnt].epoch));
+  hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
+  tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch.tv_sec);
+  Serial.println(String(hyakuyo.data[hyakuyo.cnt].epoch.tv_sec));
   Serial.printf("%04d/%02d/%02d(%s) %02d:%02d:%02d\n",
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
                 wd[tm->tm_wday],
@@ -172,20 +172,23 @@ void setup() {
     Serial.println("\n");
     Serial.println(hyakuyoJSON(hyakuyo));
     Serial.println("\n");
+
     
     // 送信がうまくいったらRTCメモリを初期化
+
+    
     rtcInit(&hyakuyo);
     Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
   }
   
   
-  hyakuyo.data[hyakuyo.cnt].epoch = time(NULL);
+  hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
    
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
   sprintf(data, "%02d%10d%s%5.1f%4.1f%4d",
           hyakuyo.cnt,
-          hyakuyo.data[hyakuyo.cnt].epoch,
+         hyakuyo.data[hyakuyo.cnt].epoch.tv_sec,
           (hyakuyo.data[hyakuyo.cnt].crc ? "1" : "0"),
           hyakuyo.data[hyakuyo.cnt].temp,
           hyakuyo.data[hyakuyo.cnt].humid,
