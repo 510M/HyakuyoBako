@@ -41,9 +41,7 @@ void setup() {
   // NTP設定
   configTime(JST, 0, NTP1, NTP2);
   delay(500);
-}
 
-void loop() {
 
   time_t t;
   struct tm *tm;
@@ -159,6 +157,10 @@ void loop() {
   delay(20);
   ESP.deepSleep(1e6 * 15, WAKE_RF_DEFAULT); // sleep 15 seconds
   delay(1000);
+}
+
+void loop() {
+
 }
 
 void readAM2321(byte *rdptr, byte length )
