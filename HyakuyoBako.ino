@@ -67,6 +67,7 @@ void setup() {
       Serial.println("<<< system_rtc_mem_read faild>>>");
     }
     if (hyakuyo_t.cnt == 9) {
+      
       hyakuyo_t.cnt = 0;
     } else {
       hyakuyo_t.cnt++;
@@ -99,13 +100,13 @@ void setup() {
   configTime(JST, 0, NTP1, NTP2);
   delay(500);
 
-  time_t t;
+  //time_t epoch;
   struct tm *tm;
   static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
-  Serial.println("\n【time_t型のサイズは " + String(sizeof(t)) + " バイトです。】\n");
-  t = time(NULL);
-  tm = localtime(&t);
-  Serial.println(String(t));
+  Serial.println("\n【time_t型のサイズは " + String(sizeof(hyakuyo_t.data[hyakuyo_t.cnt].epoch)) + " バイトです。】\n");
+  hyakuyo_t.data[hyakuyo_t.cnt].epoch = time(NULL);
+  tm = localtime(&hyakuyo_t.data[hyakuyo_t.cnt].epoch);
+  Serial.println(String(hyakuyo_t.data[hyakuyo_t.cnt].epoch));
   Serial.printf("%04d/%02d/%02d(%s) %02d:%02d:%02d\n",
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
                 wd[tm->tm_wday],
@@ -115,7 +116,7 @@ void setup() {
 
   //String D = String(tm->tm_year+1900) + "-" + String(tm->tm_mon+1) + "-" + String(tm->tm_mday);
   //D += "T" + String(tm->tm_hour) + ":" + String(tm->tm_min) + ":" + String(tm->tm_sec) + "%2B09:00";
-  long E = t;
+
   char D[28]; // 27文字（2018-06-21T02:30:26%2B09:00）＋ 末尾のNULL(\0)
   sprintf(D, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
           , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
@@ -142,39 +143,42 @@ void setup() {
   Serial.print(b);
 
   // 65535はエラー？
-  float T, H;
-  Serial.println("\n【float型のサイズは " + String(sizeof(T)) + " バイトです。】\n");
-  if(crc16(rdptr, 8) == 0) {
+  Serial.println("\n【float型のサイズは " + String(sizeof(hyakuyo_t.data[hyakuyo_t.cnt].temp)) + " バイトです。】\n");
+   if(crc16(rdptr, 8) == 0) {
   
     // CRC OK
     if (rdptr[4] < B10000000) {
-      T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
+      hyakuyo_t.data[hyakuyo_t.cnt].temp = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
     } else {
       // マイナス温度対策 ADD A_GOTO
       // 最上位ビット分引いてマイナスをつける
       rdptr[4] -= B10000000;
-      T = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
+      hyakuyo_t.data[hyakuyo_t.cnt].temp = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
     }
   
-    H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0　
+    hyakuyo_t.data[hyakuyo_t.cnt].humid = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
   } else {
     // CRC NG
     // とりま0をセット
-    T = 0;
-    H = 0;
+    hyakuyo_t.data[hyakuyo_t.cnt].temp = 0;
+    hyakuyo_t.data[hyakuyo_t.cnt].humid = 0;
   }
 
-  unsigned short L = analogRead(0);                     // 0 to 1024 (ESP8266)
-  Serial.println("\n【unsigned short型のサイズは " + String(sizeof(L)) + " バイトです。】\n");
-  Serial.print(T, 1);
+  hyakuyo_t.data[hyakuyo_t.cnt].lum = analogRead(0);                     // 0 to 1024 (ESP8266)
+  Serial.println("\n【unsigned short型のサイズは " + String(sizeof(hyakuyo_t.data[hyakuyo_t.cnt].lum)) + " バイトです。】\n");
+  Serial.print(hyakuyo_t.data[hyakuyo_t.cnt].temp, 1);
   Serial.print("°C");
   Serial.print("\t");
-  Serial.print(H, 1);
+  Serial.print(hyakuyo_t.data[hyakuyo_t.cnt].humid, 1);
   Serial.print("%RH");
   Serial.print("\t");
-  Serial.println(L, DEC);
+  Serial.println(hyakuyo_t.data[hyakuyo_t.cnt].lum, DEC);
 
   Serial.println("\n<<< " + String(hyakuyo_t.cnt) + " >>>");
+
+  // ここでhash計算予定
+  hyakuyo_t.hash = 0;       // とりま0
+  //hyakuyo_t.cnt           // 頭でセット済
 
   if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo_t, sizeof(hyakuyo_t))) {
     Serial.println("system_rtc_mem_write success");
@@ -182,11 +186,42 @@ void setup() {
     Serial.println("system_rtc_mem_write failed");
   }
 
-  t = time(NULL);
+  if(hyakuyo_t.cnt == 9) {
+    // 10回目終了時、今までのデータをRTCメモリから全て表示してみる
+    Serial.println("\n");
+    for (int i = 0; i <= 9; i++) {
+      char str[100];
   
+      sprintf(str, "\t【%d回目】UNIXタイム:%10d, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d",
+          i+1,
+          hyakuyo_t.data[i].epoch,
+          hyakuyo_t.data[i].temp,
+          hyakuyo_t.data[i].humid,
+          hyakuyo_t.data[i].lum);
+  
+      Serial.println(str);
+    }
+    Serial.println("\n");
+  }
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  hyakuyo_t.data[hyakuyo_t.cnt].epoch = time(NULL);
+   
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
-  sprintf(data, "%02d%10d%5.1f%4.1f%4d", hyakuyo_t.cnt, E, T, H, L);
+  sprintf(data, "%02d%10d%5.1f%4.1f%4d",
+          hyakuyo_t.cnt,
+          hyakuyo_t.data[hyakuyo_t.cnt].epoch,
+          hyakuyo_t.data[hyakuyo_t.cnt].temp,
+          hyakuyo_t.data[hyakuyo_t.cnt].humid,
+          hyakuyo_t.data[hyakuyo_t.cnt].lum);
   
   String url = "/hyakuyobako/receive.php";
   //url += "?data=" + String(data);
