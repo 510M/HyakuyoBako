@@ -69,42 +69,72 @@ void setup() {
   sprintf(D, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
           , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
+  // RTCメモリに最小限に記録することを考える
+  // 1529593225,24.6,42.3,1024
+  // epoch: 10バイト（UNIXTIME）
+  // temp: 4バイト（-40.0 to 80.0）を10倍
+  // humid: 3バイト（0 to 99.9）を10倍
+  // lum: 4バイト（0 to 1024）
+  
+  // 合計 21バイト
+  
+  // 一応バッファを25(24+1) x 20回分とする
+  // 10回（10分）毎に送信し、エラー時再試行+10回（10分まで）可能とする
+
 
   // センサーの初期化
   byte rdptr[20];
   readAM2321(rdptr, 8);
 
-  // START マイナス温度対策 ADD A_GOTO
-  String M = "";
-  if(rdptr[4] >= B10000000) {
+  char M;
+  if(rdptr[4] < B10000000) {
+    M = '+';
+  } else {
+   
     rdptr[4] -= B10000000;
-    M = "-";
+    M = '-';
   }
   // END マイナス温度対策 ADD A_GOTO
+  /*
+  float T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
+  float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // 0 to 99.9
+  */
+  int T;
+  if(rdptr[4] < B10000000) {
+    T = (int)(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
+  } else {
+    // マイナス温度対策 ADD A_GOTO
+    // 最上位ビット分引いてマイナスをつける
+    rdptr[4] -= B10000000;
+    T = -(int)(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
+  }
+
+  int H = (int)(rdptr[2] * 256 + rdptr[3]);  // -40.0 to 80.0
+  int L = analogRead(0);                     // 0 to 1024 (ESP8266)
   
-  float T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;
-  float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;
-
-
   Serial.print(T, 1);
   Serial.print("°C");
   Serial.print("\t");
   Serial.print(H, 1);
   Serial.print("%");
   Serial.print("\t");
-  int L = analogRead(0);
   Serial.println(L, DEC);
-
+  
   t = time(NULL);
+  
+  /*
   tm = localtime(&t);
   Serial.println(String(t));
   Serial.printf("%04d/%02d/%02d(%s) %02d:%02d:%02d\n",
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
                 wd[tm->tm_wday],
                 tm->tm_hour, tm->tm_min, tm->tm_sec);
+
   char S[28]; // 27文字（2018-06-21T02:30:26%2B09:00）＋ 末尾のNULL(\0)
   sprintf(S, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
           , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+  */
+  /*
   String data = "{";
   data += "\"send\":\"" + String(S) + "\",";
   data += "\"data\":[{";
@@ -118,9 +148,15 @@ void setup() {
 
   data += "}]";
   data += "}";
+  */
 
+  // いったんRTCメモリに保存することを想定したデータを作成してみる
+  char data[25];
+  sprintf(data, "%10d%4d%3d%4d",E,T,H,L);
+  
   String url = "/hyakuyobako/receive.php";
-  url += "?data=" + data;
+  //url += "?data=" + String(data);
+  url += "?data=" + URLEncode(data);
 
   Serial.println(url);
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
@@ -176,9 +212,7 @@ void setup() {
 void loop() {
 
 }
-
-void readAM2321(byte *rdptr, byte length )
-{
+void readAM2321(byte *rdptr, byte length ) {
   int i;
   byte  deviceaddress = 0x5C;
   //step1
@@ -203,5 +237,24 @@ void readAM2321(byte *rdptr, byte length )
       rdptr[i] = Wire.read();
     }
   }
+}
+
+String URLEncode(const char* msg) {
+  const char *hex = "0123456789abcdef";
+  String encodedMsg = "";
+
+  while (*msg!='\0'){
+      if( ('a' <= *msg && *msg <= 'z')
+              || ('A' <= *msg && *msg <= 'Z')
+              || ('0' <= *msg && *msg <= '9') ) {
+          encodedMsg += *msg;
+      } else {
+          encodedMsg += '%';
+          encodedMsg += hex[*msg >> 4];
+          encodedMsg += hex[*msg & 15];
+      }
+      msg++;
+  }
+  return encodedMsg;
 }
 
