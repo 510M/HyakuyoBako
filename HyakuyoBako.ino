@@ -1,3 +1,6 @@
+extern "C" {
+#include <user_interface.h>
+};
 #include <ESP8266WiFi.h>
 #include <time.h>
 #include "define.h" // Git管理対象外とする！
@@ -11,14 +14,55 @@ WiFiClientSecure client;
 
 void setup() {
 
-  Serial.begin(115200);
-  delay(20);
-  Serial.println("");
-  Serial.println("START");
-  
-  String resetReason = ESP.getResetReason();
-  Serial.println(resetReason);
 
+  Serial.begin(115200);
+  delay(500);
+  bool first;
+  if(ESP.getResetReason() == "Deep-Sleep Wake") {
+    first = false;
+  } else {
+    first = true;
+  }
+
+  //String resetReason = ESP.getResetReason();
+  //Serial.println("\n********** " + resetReason + " **********");
+
+  static const uint32_t USER_DATA_ADDR = 66; // uint32_t => 4バイトの符号なし整数
+  struct {
+    // haykuyo_data
+    uint32_t hash;
+    uint16_t count;
+    uint8_t  send;
+    uint16_t etc2;
+  } haykuyo_data;
+
+  if(first) {
+    haykuyo_data.count = 1;
+  } else {
+    if (system_rtc_mem_read(USER_DATA_ADDR, &haykuyo_data, sizeof(haykuyo_data))) {
+      //Serial.println("system_rtc_mem_read success");
+
+    } else {
+      Serial.println("<<< system_rtc_mem_read faild>>>");
+    }
+    if(haykuyo_data.count == 10) {
+      haykuyo_data.count = 1;
+    } else {
+      haykuyo_data.count++;
+    }
+  }
+  Serial.println("\n<<< " + String(haykuyo_data.count) + " >>>");
+      
+  if (system_rtc_mem_write(USER_DATA_ADDR, &haykuyo_data, sizeof(haykuyo_data))) {
+    Serial.println("system_rtc_mem_write success");
+  } else {
+    Serial.println("system_rtc_mem_write failed");
+  }
+
+
+
+
+  
   Wire.begin();
 
 
@@ -139,10 +183,12 @@ void setup() {
 
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
-  sprintf(data, "%10d%5.1f%4.1f%4d",E,T,H,L);
+  sprintf(data, "%02d%10d%5.1f%4.1f%4d",haykuyo_data.count, E,T,H,L);
   
   String url = "/hyakuyobako/receive.php";
   //url += "?data=" + String(data);
+
+  
   url += "?data=" + URLEncode(data);
 
   Serial.println(url);
