@@ -72,45 +72,31 @@ void setup() {
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024
   // epoch: 10バイト（UNIXTIME）
-  // temp: 4バイト（-40.0 to 80.0）を10倍
-  // humid: 3バイト（0 to 99.9）を10倍
+  // temp: 5バイト（-40.0 to 80.0）
+  // humid: 4バイト（0 to 99.9）
   // lum: 4バイト（0 to 1024）
   
-  // 合計 21バイト
+  // 合計 23バイト
   
   // 一応バッファを25(24+1) x 20回分とする
   // 10回（10分）毎に送信し、エラー時再試行+10回（10分まで）可能とする
-
 
   // センサーの初期化
   byte rdptr[20];
   readAM2321(rdptr, 8);
 
-  char M;
-  if(rdptr[4] < B10000000) {
-    M = '+';
-  } else {
-   
-    rdptr[4] -= B10000000;
-    M = '-';
-  }
-  // END マイナス温度対策 ADD A_GOTO
-  /*
-  float T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
-  float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // 0 to 99.9
-  */
   // 65535はエラー？
-  int T;
+  float T;
   if(rdptr[4] < B10000000) {
-    T = (int)(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
+    T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
   } else {
     // マイナス温度対策 ADD A_GOTO
     // 最上位ビット分引いてマイナスをつける
     rdptr[4] -= B10000000;
-    T = (int)-(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
+    T = (float)-(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
   }
 
-  int H = (int)(rdptr[2] * 256 + rdptr[3]);  // -40.0 to 80.0
+  float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
   int L = analogRead(0);                     // 0 to 1024 (ESP8266)
   
   Serial.print(T, 1);
@@ -153,7 +139,7 @@ void setup() {
 
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
-  sprintf(data, "%10d%4d%3d%4d",E,T,H,L);
+  sprintf(data, "%10d%5.1f%4.1f%4d",E,T,H,L);
   
   String url = "/hyakuyobako/receive.php";
   //url += "?data=" + String(data);
