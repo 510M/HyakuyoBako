@@ -12,11 +12,16 @@ WiFiClientSecure client;
 void setup() {
 
   Serial.begin(115200);
+  delay(20);
+  Serial.println("");
+  Serial.println("START");
+  
+  String resetReason = ESP.getResetReason();
+  Serial.println(resetReason);
+
   Wire.begin();
 
 
-  Serial.println("");
-  Serial.println("START");
 
   // WiFi設定
   WiFi.setOutputPower(0); // 低出力に（節電！）
