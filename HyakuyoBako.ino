@@ -31,6 +31,15 @@ void setup() {
   //Serial.println("\n********** " + resetReason + " **********");
 
   static const uint32_t USER_DATA_ADDR = 66; // uint32_t => 4バイトの符号なし整数
+
+  // RTCメモリに最小限に記録することを考える
+  // 1529593225,24.6,42.3,1024
+  // epoch: 10バイト（UNIXTIME）
+  // temp: 5バイト（-40.0 to 80.0）
+  // humid: 4バイト（0 to 99.9）
+  // lum: 4バイト（0 to 1024）
+  // 合計 23バイト
+
   struct {
     // haykuyo_data
     uint32_t hash;
@@ -116,15 +125,6 @@ void setup() {
   sprintf(D, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
           , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-  // RTCメモリに最小限に記録することを考える
-  // 1529593225,24.6,42.3,1024
-  // epoch: 10バイト（UNIXTIME）
-  // temp: 5バイト（-40.0 to 80.0）
-  // humid: 4バイト（0 to 99.9）
-  // lum: 4バイト（0 to 1024）
-  // 合計 23バイト
-
-  
   // 一応バッファを25(24+1) x 20回分とする
   // 10回（10分）毎に送信し、エラー時再試行+10回（10分まで）可能とする
 
