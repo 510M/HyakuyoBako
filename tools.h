@@ -1,18 +1,21 @@
-// RTCメモリに最小限に記録することを考える
-// 1529593225,24.6,42.3,1024
+  static const int MAX_COUNT = 3;
+  static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
 
-// データ総容量 456バイト
-
-// データ情報   8バイト
-// hash（FNV-1E） => uint32_t型　4 byte (32bit）
-// cnt (0to9.. 送信失敗した場合は最大25まで) => unsigned short型　2 byte (16bit）65535まで
-
-// データ本体   20バイト x 25 = 500バイト
-// epoch（UNIXTIME） => time_t型　4 byte
-// crc（-40.0 to 80.0）=> boolean型 1byte
-// temp（-40.0 to 80.0）=> float型 4 byte
-// humid（0 to 99.9）=> float型 4 byte
-// lum（0 to 1024）unsigned short型 2 byte 65535まで
+  // RTCメモリに最小限に記録することを考える
+  // 1529593225,24.6,42.3,1024
+  
+  // データ総容量 456バイト
+  
+  // データ情報   8バイト
+  // hash（FNV-1E） => unsigned long型　4 byte (32bit）
+  // cnt (0to9.. 送信失敗した場合は最大25まで) => unsigned short型　2 byte (16bit）65535まで
+  
+  // データ本体   20バイト x 25 = 500バイト
+  // epoch（UNIXTIME） => time_t型　4 byte
+  // crc（-40.0 to 80.0）=> boolean型 1byte
+  // temp（-40.0 to 80.0）=> float型 4 byte
+  // humid（0 to 99.9）=> float型 4 byte
+  // lum（0 to 1024）unsigned short型 2 byte 65535まで
 
 struct Data {
   time_t epoch;
@@ -105,18 +108,59 @@ String URLEncode(const char* msg) {
   return encodedMsg;
 }
 
-String hyakuyoJSON(struct Hyakuyo hyakuyo) {
-    String str = "";
-    char buf[100];
-    for (int i = 0; i <= hyakuyo.cnt; i++) {
-      
-      sprintf(buf, "\t【%d回目】UNIXタイム:%10d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
+  void rtcInit(struct Hyakuyo *hyakuyo){
+  
+    //struct Hyakuyo _hyakuyo;
+    
+    hyakuyo->hash = 0;
+    hyakuyo->cnt = 0;
+    for (int i = 0; i < 25; i++) {
+      hyakuyo->data[i].epoch = 0;
+      hyakuyo->data[i].crc = false;
+      hyakuyo->data[i].temp = 0;
+      hyakuyo->data[i].humid = 0;
+    }
+  
+    //_hyakuyo.cnt = 0;
+    //_hyakuyo = *hyakuyo;
+    
+    if (system_rtc_mem_write(USER_DATA_ADDR, &*hyakuyo, sizeof(*hyakuyo))) {
+      Serial.println("RTC INIT success");
+    } else {
+      Serial.println("RTC INIT failed");
+    }
+  }
+  
+  String hyakuyoJSON(struct Hyakuyo _hyakuyo) {
+     String str = "";
+     char buf[100];
+      struct tm *tm;
+      //Serial.println("渡されたカウントは" + String(_hyakuyo.cnt) + "です。");    
+      for (int i = 0; i <= _hyakuyo.cnt; i++) {
+  
+        char datetime[50];
+        tm = localtime(&_hyakuyo.data[i].epoch);
+        // “YYYY-MM-DD HH:mm:ss.sss”
+        //strftime(buf,sizeof(datetime), "%Y-%m-%d %H:%M:%S.%3N", tm);
+        strftime(datetime,sizeof(datetime), "%F %T.%3N", tm);
+  
+        //Serial.println("フォーマット前の日付は" + String(_hyakuyo.data[i].epoch) + "です。");  
+        /*
+        sprintf(datetime, "%04d/%02d/%02d %02d:%02d:%02d\n",
+                  tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+                  tm->tm_hour, tm->tm_min, tm->tm_sec);
+        */        
+        //Serial.println("フォーマットした日付は" + String(datetime) + "です。");  
+  
+       
+        sprintf(buf, "\t【%d回目】ISO8601:%s, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
           i+1,
-          hyakuyo.data[i].epoch,
-          (hyakuyo.data[i].crc ? "true" : "false"),
-          hyakuyo.data[i].temp,
-          hyakuyo.data[i].humid,
-          hyakuyo.data[i].lum);
+          //_hyakuyo.data[i].epoch,
+          datetime,
+          (_hyakuyo.data[i].crc ? "true" : "false"),
+          _hyakuyo.data[i].temp,
+          _hyakuyo.data[i].humid,
+          _hyakuyo.data[i].lum);
       str += String(buf);
     }
     return str;

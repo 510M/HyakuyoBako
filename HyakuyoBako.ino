@@ -6,8 +6,9 @@ extern "C" {
 #include <Wire.h> //AM2321
 
 #include "define.h" // Git管理対象外とする！
-#define JST   3600*9
+#define JST 3600* 9
 #include "tools.h"
+
 
 WiFiClientSecure client;
 
@@ -26,23 +27,23 @@ void setup() {
     first = true;
   }
 
-  static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
-  // ↑64からだとstackとか表示されて止まってしまう
-  // 4バイト区切り、0 ~ 63で256バイトなので本来は64から使用できるはず・・・
   if (first) {
-    hyakuyo.cnt = 0;
+    // RTCメモリを初期化
+    rtcInit(&hyakuyo);
   } else {
     if (system_rtc_mem_read(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
-      //Serial.println("system_rtc_mem_read success");
 
+      if(hyakuyo.hash != 4294967295) {
+        // 仮にhashが4294967295じゃなければ不整合(初期化済み)ということにしておく
+        hyakuyo.cnt = 0;
+      } else {
+        //Serial.println("system_rtc_mem_read success");
+        Serial.println("\n######## 読み込んだカウンタは:" + String(hyakuyo.cnt) + " ########\n");
+        hyakuyo.cnt++;
+      }
     } else {
-      Serial.println("<<< system_rtc_mem_read faild>>>");
-    }
-    if (hyakuyo.cnt == 9) {
-      
+      Serial.println("※※※ system_rtc_mem_read faild ※※※");
       hyakuyo.cnt = 0;
-    } else {
-      hyakuyo.cnt++;
     }
   }
 
@@ -56,7 +57,7 @@ void setup() {
 
   // Wi-Fi接続
   WiFi.begin(SSID, PWD);
-
+  Serial.println("");
   while (WiFi.status() != WL_CONNECTED) { // Wi-Fi AP接続待ち
     delay(500);
     Serial.print(".");
@@ -142,6 +143,9 @@ void setup() {
   }
 
   hyakuyo.data[hyakuyo.cnt].lum = analogRead(0);                     // 0 to 1024 (ESP8266)
+
+
+  
   Serial.println("\n【unsigned short型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].lum)) + " バイトです。】\n");
   Serial.print(hyakuyo.data[hyakuyo.cnt].temp, 1);
   Serial.print("°C");
@@ -154,7 +158,7 @@ void setup() {
   Serial.println("\n<<< " + String(hyakuyo.cnt) + " >>>");
 
   // ここでhash計算予定
-  hyakuyo.hash = 0;       // とりま0
+  hyakuyo.hash = 4294967295;       // とりま4294967295
   //hyakuyo.cnt           // 頭でセット済
 
   if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
@@ -163,11 +167,15 @@ void setup() {
     Serial.println("system_rtc_mem_write failed");
   }
 
-  if(hyakuyo.cnt == 9) {
+  if(hyakuyo.cnt >= MAX_COUNT-1) {
     // 10回目終了時、今までのデータをRTCメモリから全て表示してみる
     Serial.println("\n");
     Serial.println(hyakuyoJSON(hyakuyo));
     Serial.println("\n");
+    
+    // 送信がうまくいったらRTCメモリを初期化
+    rtcInit(&hyakuyo);
+    Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
   }
   
   
