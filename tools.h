@@ -1,3 +1,19 @@
+// RTCメモリに最小限に記録することを考える
+// 1529593225,24.6,42.3,1024
+
+// データ総容量 456バイト
+
+// データ情報   8バイト
+// hash（FNV-1E） => uint32_t型　4 byte (32bit）
+// cnt (0to9.. 送信失敗した場合は最大25まで) => unsigned short型　2 byte (16bit）65535まで
+
+// データ本体   20バイト x 25 = 500バイト
+// epoch（UNIXTIME） => time_t型　4 byte
+// crc（-40.0 to 80.0）=> boolean型 1byte
+// temp（-40.0 to 80.0）=> float型 4 byte
+// humid（0 to 99.9）=> float型 4 byte
+// lum（0 to 1024）unsigned short型 2 byte 65535まで
+
 struct Data {
   time_t epoch;
   bool crc;

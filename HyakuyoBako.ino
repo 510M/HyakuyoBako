@@ -29,23 +29,6 @@ void setup() {
   static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
   // ↑64からだとstackとか表示されて止まってしまう
   // 4バイト区切り、0 ~ 63で256バイトなので本来は64から使用できるはず・・・
-  
-  // RTCメモリに最小限に記録することを考える
-  // 1529593225,24.6,42.3,1024
-  
-  // データ情報   8バイト
-  // データ総容量 504バイト
-  // hash（FNV-1E） => uint32_t型　4 byte (32bit）
-  // cnt (0to9.. 送信失敗した場合は最大XXまで) => unsigned short型　2 byte (16bit）65535まで
-  // 512 - 4 - 8 = 500, 500 / 20 = 25
-  // ※先頭位置を(65からに)1つ下げた分、4バイト差し引かなければならなかった
-  // データ本体    合計20バイト x 31 = 496
-  // crc（-40.0 to 80.0）=> boolean型 1byte
-  // epoch（UNIXTIME） => time_t型　4 byte
-  // temp（-40.0 to 80.0）=> float型 4 byte
-  // humid（0 to 99.9）=> float型 4 byte
-  // lum（0 to 1024）unsigned short型 2 byte 65535まで
-  
   if (first) {
     hyakuyo.cnt = 0;
   } else {
