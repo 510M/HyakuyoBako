@@ -37,9 +37,10 @@ void setup() {
   // データ総容量 504バイト
   // hash（FNV-1E） => uint32_t型　4 byte (32bit）
   // cnt (0to9.. 送信失敗した場合は最大XXまで) => unsigned short型　2 byte (16bit）65535まで
-  
-  // 512 - 8 = 505, 505 / 16 = 31
-  // データ本体    合計16バイト x 31 = 496
+  // 512 - 4 - 8 = 500, 500 / 20 = 25
+  // ※先頭位置を(65からに)1つ下げた分、4バイト差し引かなければならなかった
+  // データ本体    合計20バイト x 31 = 496
+  // crc（-40.0 to 80.0）=> boolean型 1byte
   // epoch（UNIXTIME） => time_t型　4 byte
   // temp（-40.0 to 80.0）=> float型 4 byte
   // humid（0 to 99.9）=> float型 4 byte
@@ -47,6 +48,7 @@ void setup() {
   
   struct hyakuyo {
     time_t epoch;
+    bool crc;
     float temp;
     float humid;
     unsigned short lum;
@@ -54,7 +56,7 @@ void setup() {
   struct {
     unsigned long int hash;
     unsigned short cnt;
-    struct hyakuyo data[30];
+    struct hyakuyo data[25];
   }hyakuyo_t;
 
   if (first) {
@@ -103,7 +105,10 @@ void setup() {
   //time_t epoch;
   struct tm *tm;
   static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
+
+  
   Serial.println("\n【time_t型のサイズは " + String(sizeof(hyakuyo_t.data[hyakuyo_t.cnt].epoch)) + " バイトです。】\n");
+
   hyakuyo_t.data[hyakuyo_t.cnt].epoch = time(NULL);
   tm = localtime(&hyakuyo_t.data[hyakuyo_t.cnt].epoch);
   Serial.println(String(hyakuyo_t.data[hyakuyo_t.cnt].epoch));
@@ -145,8 +150,9 @@ void setup() {
   // 65535はエラー？
   Serial.println("\n【float型のサイズは " + String(sizeof(hyakuyo_t.data[hyakuyo_t.cnt].temp)) + " バイトです。】\n");
    if(crc16(rdptr, 8) == 0) {
-  
     // CRC OK
+    hyakuyo_t.data[hyakuyo_t.cnt].crc = true;
+    
     if (rdptr[4] < B10000000) {
       hyakuyo_t.data[hyakuyo_t.cnt].temp = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
     } else {
@@ -159,6 +165,7 @@ void setup() {
     hyakuyo_t.data[hyakuyo_t.cnt].humid = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
   } else {
     // CRC NG
+    hyakuyo_t.data[hyakuyo_t.cnt].crc = false;
     // とりま0をセット
     hyakuyo_t.data[hyakuyo_t.cnt].temp = 0;
     hyakuyo_t.data[hyakuyo_t.cnt].humid = 0;
@@ -191,10 +198,11 @@ void setup() {
     Serial.println("\n");
     for (int i = 0; i <= 9; i++) {
       char str[100];
-  
-      sprintf(str, "\t【%d回目】UNIXタイム:%10d, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d",
+      //sprintf(str, "\t【%d回目】UNIXタイム:%10d, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d",
+      sprintf(str, "\t【%d回目】UNIXタイム:%10d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d",
           i+1,
           hyakuyo_t.data[i].epoch,
+          (hyakuyo_t.data[i].crc ? "true" : "false"),
           hyakuyo_t.data[i].temp,
           hyakuyo_t.data[i].humid,
           hyakuyo_t.data[i].lum);
