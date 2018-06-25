@@ -33,13 +33,13 @@ void setup() {
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024
   
-  // データ情報
+  // データ情報   8バイト
+  // データ総容量 504バイト
   // hash（FNV-1E） => uint32_t型　4 byte (32bit）
-  // cnt (0to9.. 送信失敗した場合は最大29まで) => unsigned short型　2 byte (16bit）65535まで
+  // cnt (0to9.. 送信失敗した場合は最大XXまで) => unsigned short型　2 byte (16bit）65535まで
   
-  // 512 - 6 = 506, 500 / 14 = 35
-  
-  // データ本体    合計14バイト x 30
+  // 512 - 8 = 505, 505 / 16 = 31
+  // データ本体    合計16バイト x 31 = 496
   // epoch（UNIXTIME） => time_t型　4 byte
   // temp（-40.0 to 80.0）=> float型 4 byte
   // humid（0 to 99.9）=> float型 4 byte
