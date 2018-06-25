@@ -99,6 +99,7 @@ void setup() {
   float T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
   float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // 0 to 99.9
   */
+  // 65535はエラー？
   int T;
   if(rdptr[4] < B10000000) {
     T = (int)(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
@@ -106,7 +107,7 @@ void setup() {
     // マイナス温度対策 ADD A_GOTO
     // 最上位ビット分引いてマイナスをつける
     rdptr[4] -= B10000000;
-    T = -(int)(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
+    T = (int)-(rdptr[4] * 256 + rdptr[5]);  // -40.0 to 80.0
   }
 
   int H = (int)(rdptr[2] * 256 + rdptr[3]);  // -40.0 to 80.0
