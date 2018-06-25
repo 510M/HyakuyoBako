@@ -21,11 +21,11 @@
   // lum（0 to 1024）unsigned short型 2 byte 65535まで
 
 struct Data {
-  timeval epoch;
-  bool crc;
-  float temp;
-  float humid;
-  unsigned short lum;
+  timeval epoch;      // 時間
+  bool crc;           // チェックサム結果
+  float temp;         // 気温
+  float humid;        // 湿度
+  unsigned short lum; // 明るさ
 };
 struct Hyakuyo{
   unsigned long int hash;
@@ -158,15 +158,23 @@ String URLEncode(const char* msg) {
         */        
         //Serial.println("フォーマットした日付は" + String(datetime) + "です。");  
   
-       
-        sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
-          i+1,
-          datetime,
-          (int)_hyakuyo.data[i].epoch.tv_usec/1000,
-          (_hyakuyo.data[i].crc ? "true" : "false"),
-          _hyakuyo.data[i].temp,
-          _hyakuyo.data[i].humid,
-          _hyakuyo.data[i].lum);
+       if(_hyakuyo.data[i].crc) {
+          sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
+            i+1,
+            datetime,
+            (int)_hyakuyo.data[i].epoch.tv_usec/1000,
+            (_hyakuyo.data[i].crc ? "true" : "false"),
+            _hyakuyo.data[i].temp,
+            _hyakuyo.data[i].humid,
+            _hyakuyo.data[i].lum);
+       } else {
+          sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:, 湿度:, 明るさ:%4d\n",
+            i+1,
+            datetime,
+            (int)_hyakuyo.data[i].epoch.tv_usec/1000,
+            (_hyakuyo.data[i].crc ? "true" : "false"),
+            _hyakuyo.data[i].lum);   
+       }
       str += String(buf);
     }
     return str;
