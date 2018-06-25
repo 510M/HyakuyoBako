@@ -27,45 +27,53 @@ void setup() {
     first = true;
   }
 
-  //String resetReason = ESP.getResetReason();
-  //Serial.println("\n********** " + resetReason + " **********");
-
   static const uint32_t USER_DATA_ADDR = 66; // uint32_t => 4バイトの符号なし整数
 
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024
-  // epoch: 10バイト（UNIXTIME）
-  // temp: 5バイト（-40.0 to 80.0）
-  // humid: 4バイト（0 to 99.9）
-  // lum: 4バイト（0 to 1024）
-  // 合計 23バイト
-
+  
+  // データ情報
+  // hash（FNV-1E） => uint32_t型　4 byte (32bit）
+  // cnt (0to9.. 送信失敗した場合は最大29まで) => unsigned short型　2 byte (16bit）65535まで
+  
+  // 512 - 6 = 506, 500 / 14 = 35
+  
+  // データ本体    合計14バイト x 30
+  // epoch（UNIXTIME） => time_t型　4 byte
+  // temp（-40.0 to 80.0）=> float型 4 byte
+  // humid（0 to 99.9）=> float型 4 byte
+  // lum（0 to 1024）unsigned short型 2 byte 65535まで
+  
+  struct hyakuyo {
+    time_t epoch;
+    float temp;
+    float humid;
+    unsigned short lum;
+  };
   struct {
-    // haykuyo_data
-    uint32_t hash;
-    uint16_t count;
-    uint8_t  send;
-    uint16_t etc2;
-  } haykuyo_data;
+    unsigned long int hash;
+    unsigned short cnt;
+    struct hyakuyo data[30];
+  }hyakuyo_t;
 
   if (first) {
-    haykuyo_data.count = 1;
+    hyakuyo_t.cnt = 0;
   } else {
-    if (system_rtc_mem_read(USER_DATA_ADDR, &haykuyo_data, sizeof(haykuyo_data))) {
+    if (system_rtc_mem_read(USER_DATA_ADDR, &hyakuyo_t, sizeof(hyakuyo_t))) {
       //Serial.println("system_rtc_mem_read success");
 
     } else {
       Serial.println("<<< system_rtc_mem_read faild>>>");
     }
-    if (haykuyo_data.count == 10) {
-      haykuyo_data.count = 1;
+    if (hyakuyo_t.cnt == 9) {
+      hyakuyo_t.cnt = 0;
     } else {
-      haykuyo_data.count++;
+      hyakuyo_t.cnt++;
     }
   }
-  Serial.println("\n<<< " + String(haykuyo_data.count) + " >>>");
+  Serial.println("\n<<< " + String(hyakuyo_t.cnt) + " >>>");
       
-  if (system_rtc_mem_write(USER_DATA_ADDR, &haykuyo_data, sizeof(haykuyo_data))) {
+  if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo_t, sizeof(hyakuyo_t))) {
     Serial.println("system_rtc_mem_write success");
   } else {
     Serial.println("system_rtc_mem_write failed");
@@ -103,11 +111,10 @@ void setup() {
   configTime(JST, 0, NTP1, NTP2);
   delay(500);
 
-
   time_t t;
   struct tm *tm;
   static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
-
+  Serial.println("\n【time_t型のサイズは " + String(sizeof(t)) + " バイトです。】\n");
   t = time(NULL);
   tm = localtime(&t);
   Serial.println(String(t));
@@ -148,7 +155,7 @@ void setup() {
 
   // 65535はエラー？
   float T, H;
-  
+  Serial.println("\n【float型のサイズは " + String(sizeof(T)) + " バイトです。】\n");
   if(crc16(rdptr, 8) == 0) {
   
     // CRC OK
@@ -169,8 +176,8 @@ void setup() {
     H = 0;
   }
 
-  int L = analogRead(0);                     // 0 to 1024 (ESP8266)
-  
+  unsigned short L = analogRead(0);                     // 0 to 1024 (ESP8266)
+  Serial.println("\n【unsigned short型のサイズは " + String(sizeof(L)) + " バイトです。】\n");
   Serial.print(T, 1);
   Serial.print("°C");
   Serial.print("\t");
@@ -183,7 +190,7 @@ void setup() {
   
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
-  sprintf(data, "%02d%10d%5.1f%4.1f%4d", haykuyo_data.count, E, T, H, L);
+  sprintf(data, "%02d%10d%5.1f%4.1f%4d", hyakuyo_t.cnt, E, T, H, L);
   
   String url = "/hyakuyobako/receive.php";
   //url += "?data=" + String(data);
