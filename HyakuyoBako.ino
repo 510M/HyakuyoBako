@@ -71,21 +71,8 @@ void setup() {
       hyakuyo_t.cnt++;
     }
   }
-  Serial.println("\n<<< " + String(hyakuyo_t.cnt) + " >>>");
-      
-  if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo_t, sizeof(hyakuyo_t))) {
-    Serial.println("system_rtc_mem_write success");
-  } else {
-    Serial.println("system_rtc_mem_write failed");
-  }
 
-
-
-
-  
   Wire.begin();
-
-
 
   // WiFi設定
   WiFi.setOutputPower(0); // 低出力に（節電！）20.5dBm(最大)から0.0dBm(最小)までの値
@@ -185,7 +172,15 @@ void setup() {
   Serial.print("%RH");
   Serial.print("\t");
   Serial.println(L, DEC);
-  
+
+  Serial.println("\n<<< " + String(hyakuyo_t.cnt) + " >>>");
+
+  if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo_t, sizeof(hyakuyo_t))) {
+    Serial.println("system_rtc_mem_write success");
+  } else {
+    Serial.println("system_rtc_mem_write failed");
+  }
+
   t = time(NULL);
   
   // いったんRTCメモリに保存することを想定したデータを作成してみる
