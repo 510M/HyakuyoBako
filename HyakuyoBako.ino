@@ -18,7 +18,11 @@ void setup() {
   Serial.begin(115200);
   delay(500);
   bool first;
-  if(ESP.getResetReason() == "Deep-Sleep Wake") {
+
+  //External System
+  //Deep-Sleep Wake
+
+  if (ESP.getResetReason() == "Deep-Sleep Wake") {
     first = false;
   } else {
     first = true;
@@ -36,7 +40,7 @@ void setup() {
     uint16_t etc2;
   } haykuyo_data;
 
-  if(first) {
+  if (first) {
     haykuyo_data.count = 1;
   } else {
     if (system_rtc_mem_read(USER_DATA_ADDR, &haykuyo_data, sizeof(haykuyo_data))) {
@@ -45,7 +49,7 @@ void setup() {
     } else {
       Serial.println("<<< system_rtc_mem_read faild>>>");
     }
-    if(haykuyo_data.count == 10) {
+    if (haykuyo_data.count == 10) {
       haykuyo_data.count = 1;
     } else {
       haykuyo_data.count++;
@@ -129,15 +133,30 @@ void setup() {
   byte rdptr[20];
   readAM2321(rdptr, 8);
 
+  //Serial.print("\n機能コード。3になってる？＞" + String(rdptr[0], HEX) + "\n");
+  //Serial.print("\nバイト数。4になってる？＞"+ String(rdptr[1], HEX) + "\n");
+  //Serial.print("\nCRC ＞"+ String(rdptr[7], HEX) + String(rdptr[6], HEX) + "\n");
+  char b[100];
+  sprintf(b, "\n機能コード:%02x, バイト数:%02x, CRC:%02x%02x\n", rdptr[0], rdptr[1], rdptr[7], rdptr[6]);
+  Serial.print(b);
+  // 排他的論理和＝どちらか一方が１のときのみ１ 両方１や両方０は０
+  sprintf(b, "\n%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", rdptr[0], rdptr[1], rdptr[2], rdptr[3], rdptr[40], rdptr[5], rdptr[6], rdptr[7]);
+  Serial.print(b);
+
+
+  sprintf(b, "\n計算:%04x\n", crc16(rdptr, 8));
+  Serial.print(b);
+
   // 65535はエラー？
   float T;
+  
   if(rdptr[4] < B10000000) {
     T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
   } else {
     // マイナス温度対策 ADD A_GOTO
     // 最上位ビット分引いてマイナスをつける
     rdptr[4] -= B10000000;
-    T = (float)-(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
+    T = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
   }
 
   float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
@@ -147,7 +166,7 @@ void setup() {
   Serial.print("°C");
   Serial.print("\t");
   Serial.print(H, 1);
-  Serial.print("%");
+  Serial.print("%RH");
   Serial.print("\t");
   Serial.println(L, DEC);
   
@@ -166,24 +185,24 @@ void setup() {
           , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
   */
   /*
-  String data = "{";
-  data += "\"send\":\"" + String(S) + "\",";
-  data += "\"data\":[{";
-
-  data += "\"id\":\"" + String(1) + "\",";
-  data += "\"iso8601\":\"" + String(D) + "\",";
-  data += "\"epoch\":\"" + String(E) + "\",";
-  data += "\"temp\":\"" + M + String(T) + "\",";
-  data += "\"humid\":\"" + String(H) + "\",";
-  data += "\"lum\":\"" + String(L) + "\",";
-
-  data += "}]";
-  data += "}";
+    String data = "{";
+    data += "\"send\":\"" + String(S) + "\",";
+    data += "\"data\":[{";
+  
+    data += "\"id\":\"" + String(1) + "\",";
+    data += "\"iso8601\":\"" + String(D) + "\",";
+    data += "\"epoch\":\"" + String(E) + "\",";
+    data += "\"temp\":\"" + M + String(T) + "\",";
+    data += "\"humid\":\"" + String(H) + "\",";
+    data += "\"lum\":\"" + String(L) + "\",";
+  
+    data += "}]";
+    data += "}";
   */
 
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
-  sprintf(data, "%02d%10d%5.1f%4.1f%4d",haykuyo_data.count, E,T,H,L);
+  sprintf(data, "%02d%10d%5.1f%4.1f%4d", haykuyo_data.count, E, T, H, L);
   
   String url = "/hyakuyobako/receive.php";
   //url += "?data=" + String(data);
@@ -224,7 +243,6 @@ void setup() {
     Serial.println("#####################################");
 
   } else {
-    Serial.println(line);
     Serial.println("esp8266/Arduino CI has failed");
   }
 
@@ -276,18 +294,50 @@ String URLEncode(const char* msg) {
   const char *hex = "0123456789abcdef";
   String encodedMsg = "";
 
-  while (*msg!='\0'){
-      if( ('a' <= *msg && *msg <= 'z')
-              || ('A' <= *msg && *msg <= 'Z')
-              || ('0' <= *msg && *msg <= '9') ) {
-          encodedMsg += *msg;
-      } else {
-          encodedMsg += '%';
-          encodedMsg += hex[*msg >> 4];
-          encodedMsg += hex[*msg & 15];
-      }
-      msg++;
+
+  while (*msg != '\0') {
+    if ( ('a' <= *msg && *msg <= 'z')
+         || ('A' <= *msg && *msg <= 'Z')
+         || ('0' <= *msg && *msg <= '9') ) {
+      encodedMsg += *msg;
+    } else {
+      encodedMsg += '%';
+      encodedMsg += hex[*msg >> 4];
+      encodedMsg += hex[*msg & 15];
+    }
+    msg++;
   }
   return encodedMsg;
+}
+
+// AM2321 Product Manualより
+
+unsigned short crc16(unsigned char *ptr, unsigned char len)
+{
+  unsigned short crc = 0xFFFF;
+  unsigned char i;
+  while (len--)
+  {
+
+    
+    crc ^= *ptr++;
+    for (i = 0; i < 8; i++)
+    {
+
+
+      
+      if (crc & 0x01)
+      {
+        crc >>= 1;
+        crc ^= 0xA001;
+      } else
+      {
+        crc >>= 1;
+      }
+      Serial.println(String(crc, HEX));
+    }
+  }
+
+  return crc;
 }
 
