@@ -148,18 +148,28 @@ void setup() {
   Serial.print(b);
 
   // 65535はエラー？
-  float T;
+  float T, H;
   
-  if(rdptr[4] < B10000000) {
-    T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
+  if(crc16(rdptr, 8) == 0) {
+  
+    // CRC OK
+    if (rdptr[4] < B10000000) {
+      T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;  // -40.0 to 80.0
+    } else {
+      // マイナス温度対策 ADD A_GOTO
+      // 最上位ビット分引いてマイナスをつける
+      rdptr[4] -= B10000000;
+      T = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
+    }
+  
+    H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0　
   } else {
-    // マイナス温度対策 ADD A_GOTO
-    // 最上位ビット分引いてマイナスをつける
-    rdptr[4] -= B10000000;
-    T = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
+    // CRC NG
+    // とりま0をセット
+    T = 0;
+    H = 0;
   }
 
-  float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
   int L = analogRead(0);                     // 0 to 1024 (ESP8266)
   
   Serial.print(T, 1);
