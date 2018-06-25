@@ -73,19 +73,18 @@ void setup() {
   configTime(JST, 0, NTP1, NTP2);
   delay(500);
 
-  //time_t epoch.tv_sec;
+  //struct timeval ct;
   struct tm *tm;
-  static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
-  Serial.println("\n【data型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt])) + " バイトです。】\n");
-  Serial.println("\n【hyakuyo " + String(sizeof(hyakuyo)) + " バイトです。】\n");
-  Serial.println("\n【timeval型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].epoch)) + " バイトです。】\n");
-  Serial.println("\n【boolean型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].crc)) + " バイトです。】\n");
-  hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
+  
+  //hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
+  //tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch.tv_sec);
+  gettimeofday(&hyakuyo.data[hyakuyo.cnt].epoch, NULL);
   tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch.tv_sec);
+
+  
   Serial.println(String(hyakuyo.data[hyakuyo.cnt].epoch.tv_sec));
-  Serial.printf("%04d/%02d/%02d(%s) %02d:%02d:%02d\n",
+  Serial.printf("%04d/%02d/%02d %02d:%02d:%02d\n",
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                wd[tm->tm_wday],
                 tm->tm_hour, tm->tm_min, tm->tm_sec);
 
   // ISO 8601 日本標準時(JST)

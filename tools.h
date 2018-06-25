@@ -147,9 +147,9 @@ String URLEncode(const char* msg) {
         char datetime[50];
         tm = localtime(&_hyakuyo.data[i].epoch.tv_sec);
         // “YYYY-MM-DD HH:mm:ss.sss”
-        //strftime(buf,sizeof(datetime), "%Y-%m-%d %H:%M:%S.%3N", tm);
-        strftime(datetime,sizeof(datetime), "%F %T.%3N", tm);
-  
+        //strftime(buf,sizeof(datetime), "%Y-%m-%d %H:%M:%S", tm);
+        strftime(datetime,sizeof(datetime), "%F %T", tm);
+
         //Serial.println("フォーマット前の日付は" + String(_hyakuyo.data[i].epoch.tv_sec) + "です。");
         /*
         sprintf(datetime, "%04d/%02d/%02d %02d:%02d:%02d\n",
@@ -159,10 +159,10 @@ String URLEncode(const char* msg) {
         //Serial.println("フォーマットした日付は" + String(datetime) + "です。");  
   
        
-        sprintf(buf, "\t【%d回目】ISO8601:%s, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
+        sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
           i+1,
-          //_hyakuyo.data[i].epoch.tv_sec,
           datetime,
+          (int)_hyakuyo.data[i].epoch.tv_usec/1000,
           (_hyakuyo.data[i].crc ? "true" : "false"),
           _hyakuyo.data[i].temp,
           _hyakuyo.data[i].humid,
