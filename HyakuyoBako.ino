@@ -181,34 +181,6 @@ void setup() {
   
   t = time(NULL);
   
-  /*
-  tm = localtime(&t);
-  Serial.println(String(t));
-  Serial.printf("%04d/%02d/%02d(%s) %02d:%02d:%02d\n",
-                tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                wd[tm->tm_wday],
-                tm->tm_hour, tm->tm_min, tm->tm_sec);
-
-  char S[28]; // 27文字（2018-06-21T02:30:26%2B09:00）＋ 末尾のNULL(\0)
-  sprintf(S, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
-          , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-  */
-  /*
-    String data = "{";
-    data += "\"send\":\"" + String(S) + "\",";
-    data += "\"data\":[{";
-  
-    data += "\"id\":\"" + String(1) + "\",";
-    data += "\"iso8601\":\"" + String(D) + "\",";
-    data += "\"epoch\":\"" + String(E) + "\",";
-    data += "\"temp\":\"" + M + String(T) + "\",";
-    data += "\"humid\":\"" + String(H) + "\",";
-    data += "\"lum\":\"" + String(L) + "\",";
-  
-    data += "}]";
-    data += "}";
-  */
-
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];
   sprintf(data, "%02d%10d%5.1f%4.1f%4d", haykuyo_data.count, E, T, H, L);
