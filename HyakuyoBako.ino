@@ -12,8 +12,7 @@ extern "C" {
 WiFiClientSecure client;
 
 void setup() {
-
-
+  
   Serial.begin(115200);
   delay(500);
   bool first;
@@ -27,8 +26,10 @@ void setup() {
     first = true;
   }
 
-  static const uint32_t USER_DATA_ADDR = 66; // uint32_t => 4バイトの符号なし整数
-
+  static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
+  // ↑64からだとstackとか表示されて止まってしまう
+  // 4バイト区切り、0 ~ 63で256バイトなので本来は64から使用できるはず・・・
+  
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024
   
