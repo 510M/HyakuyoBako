@@ -3,12 +3,11 @@ extern "C" {
 };
 #include <ESP8266WiFi.h>
 #include <time.h>
+#include <Wire.h> //AM2321
+
 #include "define.h" // Git管理対象外とする！
-
-//AM2321
-#include <Wire.h>
-
 #define JST   3600*9
+#include "tools.h"
 
 WiFiClientSecure client;
 
@@ -123,8 +122,8 @@ void setup() {
   // temp: 5バイト（-40.0 to 80.0）
   // humid: 4バイト（0 to 99.9）
   // lum: 4バイト（0 to 1024）
-  
   // 合計 23バイト
+
   
   // 一応バッファを25(24+1) x 20回分とする
   // 10回（10分）毎に送信し、エラー時再試行+10回（10分まで）可能とする
@@ -271,83 +270,6 @@ void setup() {
 }
 
 void loop() {
-
-}
-void readAM2321(byte *rdptr, byte length ) {
-  int i;
-  byte  deviceaddress = 0x5C;
-  //step1
-  Wire.beginTransmission(deviceaddress);
-  Wire.write(0x00);
-  Wire.endTransmission();
-  delay(1);
-  //step2
-  Wire.beginTransmission(deviceaddress);
-  Wire.write(0x03);
-  Wire.write(0x00);
-  Wire.write(0x04);
-  Wire.endTransmission();
-  delay(2);
-  //step3
-  Wire.requestFrom(deviceaddress, length);
-  delayMicroseconds(60);
-  if (length <= Wire.available())
-  {
-    for (i = 0; i < length; i++)
-    {
-      rdptr[i] = Wire.read();
-    }
-  }
 }
 
-String URLEncode(const char* msg) {
-  const char *hex = "0123456789abcdef";
-  String encodedMsg = "";
-
-
-  while (*msg != '\0') {
-    if ( ('a' <= *msg && *msg <= 'z')
-         || ('A' <= *msg && *msg <= 'Z')
-         || ('0' <= *msg && *msg <= '9') ) {
-      encodedMsg += *msg;
-    } else {
-      encodedMsg += '%';
-      encodedMsg += hex[*msg >> 4];
-      encodedMsg += hex[*msg & 15];
-    }
-    msg++;
-  }
-  return encodedMsg;
-}
-
-// AM2321 Product Manualより
-
-unsigned short crc16(unsigned char *ptr, unsigned char len)
-{
-  unsigned short crc = 0xFFFF;
-  unsigned char i;
-  while (len--)
-  {
-
-    
-    crc ^= *ptr++;
-    for (i = 0; i < 8; i++)
-    {
-
-
-      
-      if (crc & 0x01)
-      {
-        crc >>= 1;
-        crc ^= 0xA001;
-      } else
-      {
-        crc >>= 1;
-      }
-      Serial.println(String(crc, HEX));
-    }
-  }
-
-  return crc;
-}
 
