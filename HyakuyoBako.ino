@@ -24,7 +24,7 @@ void setup() {
 
 
   // WiFi設定
-  WiFi.setOutputPower(0); // 低出力に（節電！）
+  WiFi.setOutputPower(0); // 低出力に（節電！）20.5dBm(最大)から0.0dBm(最小)までの値
   WiFi.mode(WIFI_STA);
   WiFi.config(IPAddress(LOCAL), IPAddress(GATAWAY), IPAddress(SUBNET), IPAddress(DNS));
 
@@ -74,8 +74,17 @@ void setup() {
   byte rdptr[20];
   readAM2321(rdptr, 8);
 
+  // START マイナス温度対策 ADD A_GOTO
+  String M = "";
+  if(rdptr[4] >= B10000000) {
+    rdptr[4] -= B10000000;
+    M = "-";
+  }
+  // END マイナス温度対策 ADD A_GOTO
+  
   float T = (float)(rdptr[4] * 256 + rdptr[5]) / 10.0;
   float H = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;
+
 
   Serial.print(T, 1);
   Serial.print("°C");
@@ -103,7 +112,7 @@ void setup() {
   data += "\"id\":\"" + String(1) + "\",";
   data += "\"iso8601\":\"" + String(D) + "\",";
   data += "\"epoch\":\"" + String(E) + "\",";
-  data += "\"temp\":\"" + String(T) + "\",";
+  data += "\"temp\":\"" + M + String(T) + "\",";
   data += "\"humid\":\"" + String(H) + "\",";
   data += "\"lum\":\"" + String(L) + "\",";
 
@@ -179,7 +188,7 @@ void readAM2321(byte *rdptr, byte length )
   delay(1);
   //step2
   Wire.beginTransmission(deviceaddress);
-  Wire.write( 0x03);
+  Wire.write(0x03);
   Wire.write(0x00);
   Wire.write(0x04);
   Wire.endTransmission();
