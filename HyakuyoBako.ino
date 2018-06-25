@@ -4,9 +4,6 @@
 
 //AM2321
 #include <Wire.h>
-//#include <NTPClient.h>
-//#include <WiFiUdp.h>
-
 
 #define JST   3600*9
 
@@ -48,13 +45,6 @@ void setup() {
 
 void loop() {
 
-
-  /*
-    // 時刻合わせのため、24時間ごとに NTP サーバーへ問い合わせる
-    timeClient.update();
-    String D = timeClient.getFormattedTime(); // "hh:mm:ss" の文字列が返ってきます
-    long E = timeClient.getEpochTime(); // UNIXエポック
-  */
   time_t t;
   struct tm *tm;
   static const char *wd[7] = {"Sun", "Mon", "Tue", "Wed", "Thr", "Fri", "Sat"};
@@ -93,11 +83,6 @@ void loop() {
   int L = analogRead(0);
   Serial.println(L, DEC);
 
-
-
-
-
-
   t = time(NULL);
   tm = localtime(&t);
   Serial.println(String(t));
@@ -123,14 +108,6 @@ void loop() {
   data += "}";
 
   String url = "/hyakuyobako/receive.php";
-  /*
-    url += "?d=" + String(D) + "&";
-    //url += "unixtime=" + String(tm) + "&"; // epochtime
-    url += "t=" + String(T,1) + "&";
-    url += "h=" + String(H,1) + "&";
-    url += "l=" + String(L);
-    //url += String(millis(), DEC);
-  */
   url += "?data=" + data;
 
   Serial.println(url);
@@ -139,9 +116,7 @@ void loop() {
                "User-Agent: ESP8266\r\n" +
                "Pragma: no-cache\r\n" +
                "Connection: close\r\n\r\n");
-
-
-
+               
   unsigned long timeout = millis();
   while (client.available() == 0) {
     if (millis() - timeout > 5000) {
@@ -172,22 +147,10 @@ void loop() {
     Serial.println("esp8266/Arduino CI has failed");
   }
 
-
-
-
   // Ambientの初期化
-  /*
-    tone(12,262,100) ;  // ド
-    delay(100) ;
-  */
-  //tone(12,392,100) ;  // ド
-  //delay(100) ;
-  //tone(12,523,100) ;  // ド
-  //delay(100) ;
   // センサー値の取得
   // Ambientへの送信
-
-
+  
   WiFi.mode(WIFI_OFF);
   delay(20);
   WiFi.forceSleepBegin();
