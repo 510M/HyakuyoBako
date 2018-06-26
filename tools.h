@@ -138,7 +138,7 @@ String URLEncode(const char* msg) {
   }
   
   String hyakuyoJSON(struct Hyakuyo _hyakuyo) {
-     String str = "";
+     String str = "{\"writeKey\":\"XXXXXXXXXXXXXXXXXX\",\"data\":[";
      char buf[100];
       struct tm *tm;
       //Serial.println("渡されたカウントは" + String(_hyakuyo.cnt) + "です。");    
@@ -146,37 +146,31 @@ String URLEncode(const char* msg) {
   
         char datetime[50];
         tm = localtime(&_hyakuyo.data[i].epoch.tv_sec);
-        // “YYYY-MM-DD HH:mm:ss.sss”
-        //strftime(buf,sizeof(datetime), "%Y-%m-%d %H:%M:%S", tm);
         strftime(datetime,sizeof(datetime), "%F %T", tm);
 
-        //Serial.println("フォーマット前の日付は" + String(_hyakuyo.data[i].epoch.tv_sec) + "です。");
-        /*
-        sprintf(datetime, "%04d/%02d/%02d %02d:%02d:%02d\n",
-                  tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                  tm->tm_hour, tm->tm_min, tm->tm_sec);
-        */        
-        //Serial.println("フォーマットした日付は" + String(datetime) + "です。");  
+        char temp[5];
+        char humid[4];
   
-       if(_hyakuyo.data[i].crc) {
-          sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:%5.1f, 湿度:%4.1f, 明るさ:%4d\n",
-            i+1,
-            datetime,
-            (int)_hyakuyo.data[i].epoch.tv_usec/1000,
-            (_hyakuyo.data[i].crc ? "true" : "false"),
-            _hyakuyo.data[i].temp,
-            _hyakuyo.data[i].humid,
-            _hyakuyo.data[i].lum);
+        
+      if(_hyakuyo.data[i].crc) {
+        sprintf(temp, "%.1f", _hyakuyo.data[i].temp);
+        sprintf(humid, "%.1f", _hyakuyo.data[i].humid);
+
        } else {
-          sprintf(buf, "\t【%d回目】ISO8601:%s.%03d, CRC:%s, 気温:, 湿度:, 明るさ:%4d\n",
-            i+1,
-            datetime,
-            (int)_hyakuyo.data[i].epoch.tv_usec/1000,
-            (_hyakuyo.data[i].crc ? "true" : "false"),
-            _hyakuyo.data[i].lum);   
+          temp[0] = '\0';
+          humid[0] = '\0';
        }
+      sprintf(buf, "{\"created\":\"%s.%03d\",\"d1\":\"%s\",\"d2\":\"%s\",\"d3\":\"%d\"}",
+              datetime,
+              (int)_hyakuyo.data[i].epoch.tv_usec/1000,
+              temp,
+              humid,
+              _hyakuyo.data[i].lum);
       str += String(buf);
+      if(i != _hyakuyo.cnt) {
+        str += ",";
+      }
     }
+    str += "]}";
     return str;
 }
-

@@ -3,6 +3,7 @@ extern "C" {
 };
 #include <ESP8266WiFi.h>
 #include <time.h>
+
 #include <Wire.h> //AM2321
 
 #include "define.h" // Git管理対象外とする！
@@ -62,7 +63,8 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
-
+  Serial.println("");
+  
   // WiFiClient client;
   if (!client.connect(HOST, PORT)) {
     Serial.println("connection failed");
@@ -71,22 +73,22 @@ void setup() {
 
   // NTP設定
   configTime(JST, 0, NTP1, NTP2);
-  delay(500);
+  delay(3000); // 時間かかります
 
-  //struct timeval ct;
+  timeval now;
   struct tm *tm;
-  
-  //hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
-  //tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch.tv_sec);
-  gettimeofday(&hyakuyo.data[hyakuyo.cnt].epoch, NULL);
-  tm = localtime(&hyakuyo.data[hyakuyo.cnt].epoch.tv_sec);
 
   
-  Serial.println(String(hyakuyo.data[hyakuyo.cnt].epoch.tv_sec));
-  Serial.printf("%04d/%02d/%02d %02d:%02d:%02d\n",
+  gettimeofday(&now, NULL);
+  tm = localtime(&now.tv_sec);
+  Serial.printf("(2) %04d/%02d/%02d %02d:%02d:%02d - %d - %d\n",
                 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                tm->tm_hour, tm->tm_min, tm->tm_sec);
+                tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_sec, now.tv_usec);
 
+  
+  hyakuyo.data[hyakuyo.cnt].epoch = now;
+
+  
   // ISO 8601 日本標準時(JST)
 
   //String D = String(tm->tm_year+1900) + "-" + String(tm->tm_mon+1) + "-" + String(tm->tm_mday);
