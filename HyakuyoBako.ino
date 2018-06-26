@@ -49,13 +49,12 @@ void setup() {
     }
   }
 
-  Wire.begin();
+
 
   // WiFi設定
   WiFi.setOutputPower(0); // 低出力に（節電！）20.5dBm(最大)から0.0dBm(最小)までの値
   WiFi.mode(WIFI_STA);
   WiFi.config(IPAddress(LOCAL), IPAddress(GATAWAY), IPAddress(SUBNET), IPAddress(DNS));
-
 
   // Wi-Fi接続
   WiFi.begin(SSID, PWD);

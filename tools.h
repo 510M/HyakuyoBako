@@ -92,7 +92,8 @@ unsigned short crc16(unsigned char *ptr, unsigned char len)
 void readAM2321(byte *rdptr, byte length ) {
   int i;
   byte  deviceaddress = 0x5C;
-
+  Wire.begin();
+  delay(20);
   //step1
   Wire.beginTransmission(deviceaddress);
   Wire.write(0x00);
