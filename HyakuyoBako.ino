@@ -170,6 +170,9 @@ void setup() {
 
   if(hyakuyo.cnt >= MAX_COUNT-1) {
     // 10回目終了時、今までのデータをRTCメモリから全て表示してみる
+
+
+    
     Serial.println("\n");
     Serial.println(hyakuyoJSON(hyakuyo));
     Serial.println("\n");
@@ -183,7 +186,7 @@ void setup() {
   }
   
   
-  hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
+  //hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
    
   // いったんRTCメモリに保存することを想定したデータを作成してみる
   char data[25];

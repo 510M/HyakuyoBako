@@ -141,7 +141,7 @@ String URLEncode(const char* msg) {
      String str = "{\"writeKey\":\"XXXXXXXXXXXXXXXXXX\",\"data\":[";
      char buf[100];
       struct tm *tm;
-      //Serial.println("渡されたカウントは" + String(_hyakuyo.cnt) + "です。");    
+ 
       for (int i = 0; i <= _hyakuyo.cnt; i++) {
   
         char datetime[50];
