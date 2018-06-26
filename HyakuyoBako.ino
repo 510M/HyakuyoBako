@@ -175,75 +175,58 @@ void setup() {
   if(hyakuyo.cnt >= MAX_COUNT-1) {
     // 10回目終了時、今までのデータをRTCメモリから全て表示してみる
 
+    String json = hyakuyoJSON(hyakuyo);
+    const char* cstr = json.c_str();
+  
+    String url = "/hyakuyobako/receive.php";
+    url += "?data=" + URLEncode(cstr);
 
+      Serial.println(url);
+      client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+                   "Host: " + HOST + "\r\n" +
+                   "User-Agent: ESP8266\r\n" +
+                   "Pragma: no-cache\r\n" +
+                   "Connection: close\r\n\r\n");
+                   
+      unsigned long timeout = millis();
+      while (client.available() == 0) {
+        if (millis() - timeout > 5000) {
+          Serial.println(">>> Client Timeout !");
+          client.stop();
+          return;
+        }
+      }
     
-    Serial.println("\n");
-    Serial.println(hyakuyoJSON(hyakuyo));
-    Serial.println("\n");
-
+      // Read all the lines of the reply from server and print them to Serial
+      while (client.connected()) {
+        String line = client.readStringUntil('\n');
+        if (line == "\r") {
+          Serial.println("headers received");
+          break;
+        }
+      }
     
-    // 送信がうまくいったらRTCメモリを初期化
-
+      String line = client.readStringUntil('\n');
+      if (line.startsWith("{\"state\":\"success\"")) {
+        Serial.println("esp8266/Arduino CI successfull!");
+        Serial.println("#####################################");
+        Serial.println(line);
+        Serial.println("#####################################");
+        
+        // 送信がうまくいったらRTCメモリを初期化
+        rtcInit(&hyakuyo);
+        Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
     
-    rtcInit(&hyakuyo);
-    Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
+      } else {
+        Serial.println("esp8266/Arduino CI has failed");
+      }
   }
+    
+  // これ無しで通信を行わずに終了すると
+  // 2回目以降接続に失敗してしまった
+  client.stop();
+  delay(20);
   
-  
-  //hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = time(NULL);
-   
-  // いったんRTCメモリに保存することを想定したデータを作成してみる
-  char data[25];
-  sprintf(data, "%02d%10d%s%5.1f%4.1f%4d",
-          hyakuyo.cnt,
-         hyakuyo.data[hyakuyo.cnt].epoch.tv_sec,
-          (hyakuyo.data[hyakuyo.cnt].crc ? "1" : "0"),
-          hyakuyo.data[hyakuyo.cnt].temp,
-          hyakuyo.data[hyakuyo.cnt].humid,
-          hyakuyo.data[hyakuyo.cnt].lum);
-  
-  String url = "/hyakuyobako/receive.php";
-  //url += "?data=" + String(data);
-
-  
-  url += "?data=" + URLEncode(data);
-
-  Serial.println(url);
-  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-               "Host: " + HOST + "\r\n" +
-               "User-Agent: ESP8266\r\n" +
-               "Pragma: no-cache\r\n" +
-               "Connection: close\r\n\r\n");
-               
-  unsigned long timeout = millis();
-  while (client.available() == 0) {
-    if (millis() - timeout > 5000) {
-      Serial.println(">>> Client Timeout !");
-      client.stop();
-      return;
-    }
-  }
-
-  // Read all the lines of the reply from server and print them to Serial
-  while (client.connected()) {
-    String line = client.readStringUntil('\n');
-    if (line == "\r") {
-      Serial.println("headers received");
-      break;
-    }
-  }
-
-  String line = client.readStringUntil('\n');
-  if (line.startsWith("{\"state\":\"success\"")) {
-    Serial.println("esp8266/Arduino CI successfull!");
-    Serial.println("#####################################");
-    Serial.println(line);
-    Serial.println("#####################################");
-
-  } else {
-    Serial.println("esp8266/Arduino CI has failed");
-  }
-
   // Ambientの初期化
   // センサー値の取得
   // Ambientへの送信
