@@ -1,8 +1,33 @@
-  static const int MAX_COUNT = 3;
+  static const int MAX_COUNT = 10;
   static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
 
   // ↑64からだとstackとか表示されて止まってしまう
+  
+  /**
+   * FNV Constants
+   */
+  static const uint32_t FNV_OFFSET_BASIS_32 = 2166136261U;
+  static const uint32_t FNV_PRIME_32 = 16777619U;
 
+  /**
+   * FNV Hash Algorithm
+   */
+  uint32_t fnv_1_hash_32(uint8_t *bytes, size_t length)
+  {
+      uint32_t hash;
+      size_t i;
+   
+      hash = FNV_OFFSET_BASIS_32;
+      for( i = 0 ; i < length ; ++i) {
+          hash = (FNV_PRIME_32 * hash) ^ (bytes[i]);
+      }
+   
+      return hash;
+  }
+  template <class T>
+  uint32_t calc_hash(T& data) {
+    return fnv_1_hash_32(((uint8_t*)&data) + sizeof(data.hash), sizeof(T) - sizeof(data.hash));
+  }
 
   // RTCメモリに最小限に記録することを考える
   // 1529593225,24.6,42.3,1024

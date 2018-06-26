@@ -3,13 +3,11 @@ extern "C" {
 };
 #include <ESP8266WiFi.h>
 #include <time.h>
-
 #include <Wire.h> //AM2321
 
 #include "define.h" // Git管理対象外とする！
 #define JST 3600* 9
 #include "tools.h"
-
 
 WiFiClientSecure client;
 
@@ -34,8 +32,11 @@ void setup() {
   } else {
     if (system_rtc_mem_read(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
 
-      if(hyakuyo.hash != 4294967295) {
-        // 仮にhashが4294967295じゃなければ不整合(初期化済み)ということにしておく
+      //if(hyakuyo.hash != 4294967295) {
+      Serial.println("\n読み込んだハッシュは" + String(hyakuyo.hash, HEX) + "\n");
+        
+      if(hyakuyo.hash != calc_hash(hyakuyo)){
+        // hashが合っていなければ不整合(初期化済み)
         hyakuyo.cnt = 0;
       } else {
         //Serial.println("system_rtc_mem_read success");
@@ -159,7 +160,10 @@ void setup() {
   Serial.println("\n<<< " + String(hyakuyo.cnt) + " >>>");
 
   // ここでhash計算予定
-  hyakuyo.hash = 4294967295;       // とりま4294967295
+  //hyakuyo.hash = 4294967295;       // とりま4294967295
+  hyakuyo.hash = calc_hash(hyakuyo);
+  Serial.println("\n記録するハッシュは" + String(hyakuyo.hash, HEX) + "\n");
+
   //hyakuyo.cnt           // 頭でセット済
 
   if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
