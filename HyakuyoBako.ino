@@ -59,35 +59,35 @@ void setup() {
   // Wi-Fi接続
   WiFi.begin(SSID, PWD);
   Serial.println("");
+  Serial.print("WiFi Connecting ");
   while (WiFi.status() != WL_CONNECTED) { // Wi-Fi AP接続待ち
     delay(500);
     Serial.print(".");
   }
   Serial.println("");
   
-  // WiFiClient client;
-  if (!client.connect(HOST, PORT)) {
-    Serial.println("connection failed");
-    return;
-  }
-
   // NTP設定
   configTime(JST, 0, NTP1, NTP2);
-  delay(3000); // 時間かかります
 
+  time_t t;
   timeval now;
   struct tm *tm;
-
   
-  gettimeofday(&now, NULL);
-  tm = localtime(&now.tv_sec);
-  Serial.printf("(2) %04d/%02d/%02d %02d:%02d:%02d - %d - %d\n",
-                tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-                tm->tm_hour, tm->tm_min, tm->tm_sec, now.tv_sec, now.tv_usec);
-
-  
-  hyakuyo.data[hyakuyo.cnt].epoch = now;
-
+  Serial.print("NTP Synchronizing ");
+  for (int i = 0; i < 10; i++) {
+    delay(500);
+    Serial.print(".");
+    
+    t = time(NULL);
+    tm = localtime(&t);
+    if (tm->tm_year + 1900 >= 2016) {
+      gettimeofday(&now, NULL);
+      hyakuyo.data[hyakuyo.cnt].epoch.tv_sec = t;
+      hyakuyo.data[hyakuyo.cnt].epoch.tv_usec = now.tv_usec;
+      break;
+    }
+  }
+  Serial.println("");
   
   // ISO 8601 日本標準時(JST)
 
@@ -181,43 +181,52 @@ void setup() {
     url += "?data=" + URLEncode(cstr);
 
       Serial.println(url);
-      client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-                   "Host: " + HOST + "\r\n" +
-                   "User-Agent: ESP8266\r\n" +
-                   "Pragma: no-cache\r\n" +
-                   "Connection: close\r\n\r\n");
-                   
-      unsigned long timeout = millis();
-      while (client.available() == 0) {
-        if (millis() - timeout > 5000) {
-          Serial.println(">>> Client Timeout !");
-          client.stop();
-          return;
-        }
-      }
-    
-      // Read all the lines of the reply from server and print them to Serial
-      while (client.connected()) {
-        String line = client.readStringUntil('\n');
-        if (line == "\r") {
-          Serial.println("headers received");
-          break;
-        }
-      }
-    
-      String line = client.readStringUntil('\n');
-      if (line.startsWith("{\"state\":\"success\"")) {
-        Serial.println("esp8266/Arduino CI successfull!");
-        Serial.println("#####################################");
-        Serial.println(line);
-        Serial.println("#####################################");
+
+      // WiFiClient client;
+      if (client.connect(HOST, PORT)) {
         
-        // 送信がうまくいったらRTCメモリを初期化
-        rtcInit(&hyakuyo);
-        Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
-    
+        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+                     "Host: " + HOST + "\r\n" +
+                     "User-Agent: ESP8266\r\n" +
+                     "Pragma: no-cache\r\n" +
+                     "Connection: close\r\n\r\n");
+                     
+        unsigned long timeout = millis();
+        while (client.available() == 0) {
+          if (millis() - timeout > 5000) {
+            Serial.println(">>> Client Timeout !");
+            client.stop();
+            return;
+          }
+        }
+      
+        // Read all the lines of the reply from server and print them to Serial
+        while (client.connected()) {
+          String line = client.readStringUntil('\n');
+          if (line == "\r") {
+            Serial.println("headers received");
+            break;
+          }
+        }
+      
+        String line = client.readStringUntil('\n');
+        if (line.startsWith("{\"state\":\"success\"")) {
+          Serial.println("esp8266/Arduino CI successfull!");
+          Serial.println("#####################################");
+          Serial.println(line);
+          Serial.println("#####################################");
+          
+          // 送信がうまくいったらRTCメモリを初期化
+          rtcInit(&hyakuyo);
+          Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
+      
+        } else {
+          Serial.println("esp8266/Arduino CI has failed");
+        }
       } else {
-        Serial.println("esp8266/Arduino CI has failed");
+
+        Serial.println("connection failed");
+
       }
   }
     
