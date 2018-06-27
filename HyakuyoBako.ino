@@ -14,12 +14,20 @@ WiFiClientSecure client;
 void setup() {
   
   Serial.begin(115200);
-  delay(500);
+  for (int i = 0; i < 10; i++) {
+    // シリアルポートが開くまで（5秒まで）待機
+    delay(500);
+  }
+  Serial.println("");
+  Serial.println("");
+  Serial.println("### START ###");
+  Serial.println("");
+  
   bool first;
 
   //External System
   //Deep-Sleep Wake
-
+  Serial.println("    reset reason: " + ESP.getResetReason());
   if (ESP.getResetReason() == "Deep-Sleep Wake") {
     first = false;
   } else {
@@ -28,29 +36,33 @@ void setup() {
 
   if (first) {
     // RTCメモリを初期化
-    rtcInit(&hyakuyo);
+    Serial.print("    rtc_initialization-1: ");
+    if(rtcInit(&hyakuyo)) {
+      Serial.println("success");
+    } else {
+      Serial.println("faild");   
+    }  
   } else {
     if (system_rtc_mem_read(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
-
-      //if(hyakuyo.hash != 4294967295) {
-      Serial.println("\n読み込んだハッシュは" + String(hyakuyo.hash, HEX) + "\n");
-        
+      Serial.println("    rtc_mem_read: success");
+      Serial.println("    rtc_mem_hash: " + String(hyakuyo.hash, HEX));
+      
       if(hyakuyo.hash != calc_hash(hyakuyo)){
         // hashが合っていなければ不整合(初期化済み)
+        Serial.println("    rtc_mem_hash_unmatched");
         hyakuyo.cnt = 0;
       } else {
-        //Serial.println("system_rtc_mem_read success");
-        Serial.println("\n######## 読み込んだカウンタは:" + String(hyakuyo.cnt) + " ########\n");
+        Serial.println("    rtc_mem_count: " + String(hyakuyo.cnt));
         hyakuyo.cnt++;
       }
     } else {
-      Serial.println("\n※※※ system_rtc_mem_read faild ※※※");
+      Serial.println("    rtc_mem_read: faild");
       hyakuyo.cnt = 0;
     }
   }
 
-
-
+  Serial.println("    count: " + String(hyakuyo.cnt));
+  
   // WiFi設定
   WiFi.setOutputPower(0); // 低出力に（節電！）20.5dBm(最大)から0.0dBm(最小)までの値
   WiFi.mode(WIFI_STA);
@@ -58,11 +70,10 @@ void setup() {
 
   // Wi-Fi接続
   WiFi.begin(SSID, PWD);
-  Serial.println("");
-  Serial.print("WiFi Connecting ");
+  Serial.print("    wifi_connecting: ");
   while (WiFi.status() != WL_CONNECTED) { // Wi-Fi AP接続待ち
     delay(500);
-    Serial.print(".");
+    Serial.print("*");
   }
   Serial.println("");
   
@@ -73,10 +84,11 @@ void setup() {
   timeval now;
   struct tm *tm;
   
-  Serial.print("NTP Synchronizing ");
+  Serial.print("    ntp_synchronizing: ");
   for (int i = 0; i < 10; i++) {
+    // NTP同期完了まで待機（5秒まで）
     delay(500);
-    Serial.print(".");
+    Serial.print("*");
     
     t = time(NULL);
     tm = localtime(&t);
@@ -88,41 +100,17 @@ void setup() {
     }
   }
   Serial.println("");
-  
-  // ISO 8601 日本標準時(JST)
 
-  //String D = String(tm->tm_year+1900) + "-" + String(tm->tm_mon+1) + "-" + String(tm->tm_mday);
-  //D += "T" + String(tm->tm_hour) + ":" + String(tm->tm_min) + ":" + String(tm->tm_sec) + "%2B09:00";
-
-  char D[28]; // 27文字（2018-06-21T02:30:26%2B09:00）＋ 末尾のNULL(\0)
-  sprintf(D, "%04d-%02d-%02dT%02d:%02d:%02d%%2B09:00"
-          , tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-
-  // 一応バッファを25(24+1) x 20回分とする
-  // 10回（10分）毎に送信し、エラー時再試行+10回（10分まで）可能とする
-
-  // センサーの初期化
   byte rdptr[20];
   readAM2321(rdptr, 8);
 
-  //Serial.print("\n機能コード。3になってる？＞" + String(rdptr[0], HEX) + "\n");
-  //Serial.print("\nバイト数。4になってる？＞"+ String(rdptr[1], HEX) + "\n");
-  //Serial.print("\nCRC ＞"+ String(rdptr[7], HEX) + String(rdptr[6], HEX) + "\n");
   char b[100];
-  sprintf(b, "\n機能コード:%02x, バイト数:%02x, CRC:%02x%02x\n", rdptr[0], rdptr[1], rdptr[7], rdptr[6]);
-  Serial.print(b);
-  // 排他的論理和＝どちらか一方が１のときのみ１ 両方１や両方０は０
-  sprintf(b, "\n%02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", rdptr[0], rdptr[1], rdptr[2], rdptr[3], rdptr[40], rdptr[5], rdptr[6], rdptr[7]);
-  Serial.print(b);
+  sprintf(b, "    ic2: code %02x, size %02x, crc %02x%02x", rdptr[0], rdptr[1], rdptr[7], rdptr[6]);
+  Serial.println(b);
 
-
-  sprintf(b, "\n計算:%04x\n", crc16(rdptr, 8));
-  Serial.print(b);
-
-  // 65535はエラー？
-  Serial.println("\n【float型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].temp)) + " バイトです。】\n");
-   if(crc16(rdptr, 8) == 0) {
+  if(crc16(rdptr, 8) == 0) {
     // CRC OK
+    Serial.println("    ic2_crc_check: success");
     hyakuyo.data[hyakuyo.cnt].crc = true;
     
     if (rdptr[4] < B10000000) {
@@ -133,10 +121,11 @@ void setup() {
       rdptr[4] -= B10000000;
       hyakuyo.data[hyakuyo.cnt].temp = (float) - (rdptr[4] * 256 + rdptr[5]) / 10.0; // -40.0 to 80.0
     }
-  
     hyakuyo.data[hyakuyo.cnt].humid = (float)(rdptr[2] * 256 + rdptr[3]) / 10.0;  // -40.0 to 80.0
+ 
   } else {
     // CRC NG
+    Serial.println("    ic2_crc_check: faild");
     hyakuyo.data[hyakuyo.cnt].crc = false;
     // とりま0をセット
     hyakuyo.data[hyakuyo.cnt].temp = 0;
@@ -145,30 +134,20 @@ void setup() {
 
   hyakuyo.data[hyakuyo.cnt].lum = analogRead(0);                     // 0 to 1024 (ESP8266)
 
-
+  sprintf(b, "    am2321: temp %.1f°C, humid %.1f%RH, lim %d"
+              ,hyakuyo.data[hyakuyo.cnt].temp
+              ,hyakuyo.data[hyakuyo.cnt].humid
+              ,hyakuyo.data[hyakuyo.cnt].lum);
+  Serial.println(b);
   
-  Serial.println("\n【unsigned short型のサイズは " + String(sizeof(hyakuyo.data[hyakuyo.cnt].lum)) + " バイトです。】\n");
-  Serial.print(hyakuyo.data[hyakuyo.cnt].temp, 1);
-  Serial.print("°C");
-  Serial.print("\t");
-  Serial.print(hyakuyo.data[hyakuyo.cnt].humid, 1);
-  Serial.print("%RH");
-  Serial.print("\t");
-  Serial.println(hyakuyo.data[hyakuyo.cnt].lum, DEC);
-
-  Serial.println("\n<<< " + String(hyakuyo.cnt) + " >>>");
-
   // ここでhash計算予定
-  //hyakuyo.hash = 4294967295;       // とりま4294967295
   hyakuyo.hash = calc_hash(hyakuyo);
-  Serial.println("\n記録するハッシュは" + String(hyakuyo.hash, HEX) + "\n");
-
-  //hyakuyo.cnt           // 頭でセット済
-
+  Serial.println("    new_hash: " + String(hyakuyo.hash, HEX));
+  
   if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
-    Serial.println("system_rtc_mem_write success");
+    Serial.println("    rtc_mem_write: success");
   } else {
-    Serial.println("system_rtc_mem_write failed");
+    Serial.println("    rtc_mem_write: failed");
   }
 
   if(hyakuyo.cnt >= MAX_COUNT-1) {
@@ -184,7 +163,7 @@ void setup() {
 
       // WiFiClient client;
       if (client.connect(HOST, PORT)) {
-        
+        Serial.println("    connect_to_host: success");
         client.print(String("GET ") + url + " HTTP/1.1\r\n" +
                      "Host: " + HOST + "\r\n" +
                      "User-Agent: ESP8266\r\n" +
@@ -194,39 +173,36 @@ void setup() {
         unsigned long timeout = millis();
         while (client.available() == 0) {
           if (millis() - timeout > 5000) {
-            Serial.println(">>> Client Timeout !");
+            Serial.println("    host_response: timeout");
             client.stop();
             return;
           }
         }
       
-        // Read all the lines of the reply from server and print them to Serial
         while (client.connected()) {
           String line = client.readStringUntil('\n');
           if (line == "\r") {
-            Serial.println("headers received");
+            Serial.println("    host_reply: received");
             break;
           }
         }
       
         String line = client.readStringUntil('\n');
         if (line.startsWith("{\"state\":\"success\"")) {
-          Serial.println("esp8266/Arduino CI successfull!");
-          Serial.println("#####################################");
-          Serial.println(line);
-          Serial.println("#####################################");
-          
+          Serial.println("    host_status: success");
+
           // 送信がうまくいったらRTCメモリを初期化
-          rtcInit(&hyakuyo);
-          Serial.println("\n初期化された？:" + String(hyakuyo.cnt) + "\n");
-      
+          Serial.print("    rtc_initialization-2: ");
+          if(rtcInit(&hyakuyo)) {
+            Serial.println("success");
+          } else {
+            Serial.println("faild");   
+          }  
         } else {
-          Serial.println("esp8266/Arduino CI has failed");
+          Serial.println("    host_status: failed");
         }
       } else {
-
-        Serial.println("connection failed");
-
+        Serial.println("    connect_to_host: failed");
       }
   }
     
@@ -235,16 +211,16 @@ void setup() {
   client.stop();
   delay(20);
   
-  // Ambientの初期化
-  // センサー値の取得
-  // Ambientへの送信
-  
   WiFi.mode(WIFI_OFF);
   delay(20);
   WiFi.forceSleepBegin();
-
-  Serial.println("SLEEP");
-  delay(20);
+  
+  Serial.println("");
+  Serial.println("### SLEEP ###");
+  Serial.println("");
+  delay(3000);
+  Serial.end();
+  delay(3000);
   ESP.deepSleep(1e6 * 15, WAKE_RF_DEFAULT); // sleep 15 seconds
   delay(1000);
 }

@@ -137,7 +137,7 @@ String URLEncode(const char* msg) {
   return encodedMsg;
 }
 
-  void rtcInit(struct Hyakuyo *hyakuyo){
+  bool rtcInit(struct Hyakuyo *hyakuyo){
 
   //Serial.println("\nデータのサイズ" + String(sizeof(hyakuyo->data)) + "\n");
   //Serial.println("\nデータのサイズ" + String(sizeof(struct Data)) + "\n");
@@ -157,9 +157,9 @@ String URLEncode(const char* msg) {
     //_hyakuyo = *hyakuyo;
     
     if (system_rtc_mem_write(USER_DATA_ADDR, &*hyakuyo, sizeof(*hyakuyo))) {
-      Serial.println("RTC INIT success");
+      return true;
     } else {
-      Serial.println("RTC INIT failed");
+      return false;
     }
   }
   
