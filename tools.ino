@@ -1,6 +1,7 @@
   static const int MAX_COUNT = 10;
   static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
 
+
   // ↑64からだとstackとか表示されて止まってしまう
   
   /**
@@ -24,9 +25,9 @@
    
       return hash;
   }
-  template <class T>
-  uint32_t calc_hash(T& data) {
-    return fnv_1_hash_32(((uint8_t*)&data) + sizeof(data.hash), sizeof(T) - sizeof(data.hash));
+
+  uint32_t calc_fnv(Hyakuyo& data) {
+    return fnv_1_hash_32(((uint8_t*)&data) + sizeof(data.hash), sizeof(Hyakuyo) - sizeof(data.hash));
   }
 
   // RTCメモリに最小限に記録することを考える
@@ -44,20 +45,6 @@
   // temp（-40.0 to 80.0）=> float型 4 byte
   // humid（0 to 99.9）=> float型 4 byte
   // lum（0 to 1024）unsigned short型 2 byte 65535まで
-
-struct Data {
-  timeval epoch;      // 時間
-  bool crc;           // チェックサム結果
-  float temp;         // 気温
-  float humid;        // 湿度
-  unsigned short lum; // 明るさ
-};
-struct Hyakuyo{
-  unsigned long int hash;
-  unsigned short cnt;
-  struct Data data[20];
-};
-struct Hyakuyo hyakuyo;
 
 // AM2321 Product Manualより
 

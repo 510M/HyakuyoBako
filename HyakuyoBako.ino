@@ -5,10 +5,11 @@ extern "C" {
 #include <time.h>
 #include <Wire.h> //AM2321
 
+#include "structs.h"
 #include "define.h" // Git管理対象外とする！
-#define JST 3600* 9
-#include "tools.h"
 
+#define JST 3600* 9
+  
 WiFiClientSecure client;
 
 void setup() {
@@ -47,7 +48,7 @@ void setup() {
       Serial.println("    rtc_mem_read: success");
       Serial.println("    rtc_mem_hash: " + String(hyakuyo.hash, HEX));
       
-      if(hyakuyo.hash != calc_hash(hyakuyo)){
+      if(hyakuyo.hash != calc_fnv(hyakuyo)){
         // hashが合っていなければ不整合(初期化済み)
         Serial.println("    rtc_mem_hash_unmatched");
         hyakuyo.cnt = 0;
@@ -141,7 +142,7 @@ void setup() {
   Serial.println(b);
   
   // ここでhash計算予定
-  hyakuyo.hash = calc_hash(hyakuyo);
+  hyakuyo.hash = calc_fnv(hyakuyo);
   Serial.println("    new_hash: " + String(hyakuyo.hash, HEX));
   
   if (system_rtc_mem_write(USER_DATA_ADDR, &hyakuyo, sizeof(hyakuyo))) {
