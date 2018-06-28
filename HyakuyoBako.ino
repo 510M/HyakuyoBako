@@ -9,6 +9,8 @@ extern "C" {
 #include "define.h" // Git管理対象外とする！
 
 #define JST 3600* 9
+#define  MAX_COUNT 10
+#define  USER_DATA_ADDR  65  // uint32_t => 4バイトの符号なし整数
   
 WiFiClientSecure client;
 

@@ -1,5 +1,3 @@
-  static const int MAX_COUNT = 10;
-  static const uint32_t USER_DATA_ADDR = 65; // uint32_t => 4バイトの符号なし整数
 
 
   // ↑64からだとstackとか表示されて止まってしまう
