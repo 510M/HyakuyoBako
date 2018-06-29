@@ -1,3 +1,7 @@
+#include <Ambient.h>
+
+
+
 extern "C" {
 #include <user_interface.h>
 };
@@ -12,7 +16,9 @@ extern "C" {
 #define  MAX_COUNT 10
 #define  USER_DATA_ADDR  65  // uint32_t => 4バイトの符号なし整数
   
-WiFiClientSecure client;
+WiFiClientSecure client_s;  // HTTPS
+WiFiClient client;
+Ambient ambient;
 
 void setup() {
   
@@ -158,39 +164,49 @@ void setup() {
 
     char cstr[1000];
     hyakuyoJSON(hyakuyo, cstr);
-  
+    
+    if(ambient.begin(channelId, writeKey, &client)) {
+      Serial.println("    ambient_begin: success");
+      int sent = ambient.bulk_send(cstr);
+      Serial.printf("    ambient: %d bytes sent\n", sent);
+    
+    } else {
+      Serial.println("    ambient_begin: failed"); 
+    }
+
+    client.stop();
+    
     String url = "/hyakuyobako/receive.php";
     url += "?data=" + URLEncode(cstr);
 
       Serial.println(url);
 
-      // WiFiClient client;
-      if (client.connect(HOST, PORT)) {
+      if (client_s.connect(HOST, PORT)) {
         Serial.println("    connect_to_host: success");
-        client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+        client_s.print(String("GET ") + url + " HTTP/1.1\r\n" +
                      "Host: " + HOST + "\r\n" +
                      "User-Agent: ESP8266\r\n" +
                      "Pragma: no-cache\r\n" +
                      "Connection: close\r\n\r\n");
                      
         unsigned long timeout = millis();
-        while (client.available() == 0) {
+        while (client_s.available() == 0) {
           if (millis() - timeout > 5000) {
             Serial.println("    host_response: timeout");
-            client.stop();
+            client_s.stop();
             return;
           }
         }
       
-        while (client.connected()) {
-          String line = client.readStringUntil('\n');
+        while (client_s.connected()) {
+          String line = client_s.readStringUntil('\n');
           if (line == "\r") {
             Serial.println("    host_reply: received");
             break;
           }
         }
       
-        String line = client.readStringUntil('\n');
+        String line = client_s.readStringUntil('\n');
         if (line.startsWith("{\"state\":\"success\"")) {
           Serial.println("    host_status: success");
 
@@ -211,7 +227,7 @@ void setup() {
     
   // これ無しで通信を行わずに終了すると
   // 2回目以降接続に失敗してしまった
-  client.stop();
+  client_s.stop();
   delay(20);
   
   WiFi.mode(WIFI_OFF);
@@ -221,9 +237,9 @@ void setup() {
   Serial.println("");
   Serial.println("### SLEEP ###");
   Serial.println("");
-  delay(3000);
+  delay(5000);
   Serial.end();
-  delay(3000);
+  delay(5000);
   ESP.deepSleep(1e6 * 15, WAKE_RF_DEFAULT); // sleep 15 seconds
   delay(1000);
 }
