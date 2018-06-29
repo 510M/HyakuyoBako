@@ -148,9 +148,9 @@ String URLEncode(const char* msg) {
     }
   }
   
-  String hyakuyoJSON(struct Hyakuyo _hyakuyo) {
-     String str = "{\"writeKey\":\"XXXXXXXXXXXXXXXXXX\",\"data\":[";
-     char buf[100];
+  void hyakuyoJSON(struct Hyakuyo _hyakuyo, char buf[]) {
+     sprintf(buf, "{\"writeKey\":\"%s\",\"data\":[", writeKey);
+
       struct tm *tm;
  
       for (int i = 0; i <= _hyakuyo.cnt; i++) {
@@ -171,17 +171,17 @@ String URLEncode(const char* msg) {
           temp[0] = '\0';
           humid[0] = '\0';
        }
-      sprintf(buf, "{\"created\":\"%s.%03d\",\"d1\":\"%s\",\"d2\":\"%s\",\"d3\":\"%d\"}",
+      sprintf(&buf[strlen(buf)], "{\"created\":\"%s.%03d\",\"d1\":\"%s\",\"d2\":\"%s\",\"d3\":\"%d\"}",
               datetime,
               (int)_hyakuyo.data[i].epoch.tv_usec/1000,
               temp,
               humid,
               _hyakuyo.data[i].lum);
-      str += String(buf);
+
       if(i != _hyakuyo.cnt) {
-        str += ",";
+        sprintf(&buf[strlen(buf)], ",");
       }
     }
-    str += "]}";
-    return str;
+    sprintf(&buf[strlen(buf)], "]}");
+    sprintf(&buf[strlen(buf)], "%c", '\0');
 }

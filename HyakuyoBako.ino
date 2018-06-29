@@ -135,9 +135,9 @@ void setup() {
     hyakuyo.data[hyakuyo.cnt].humid = 0;
   }
 
-  hyakuyo.data[hyakuyo.cnt].lum = analogRead(0);                     // 0 to 1024 (ESP8266)
+  hyakuyo.data[hyakuyo.cnt].lum = 1024 - analogRead(0);                     // 0 to 1024 (ESP8266)
 
-  sprintf(b, "    am2321: temp %.1f°C, humid %.1f%RH, lim %d"
+  sprintf(b, "    am2321: temp %.1f°C, humid %.1f%RH, lum %d"
               ,hyakuyo.data[hyakuyo.cnt].temp
               ,hyakuyo.data[hyakuyo.cnt].humid
               ,hyakuyo.data[hyakuyo.cnt].lum);
@@ -156,8 +156,8 @@ void setup() {
   if(hyakuyo.cnt >= MAX_COUNT-1) {
     // 10回目終了時、今までのデータをRTCメモリから全て表示してみる
 
-    String json = hyakuyoJSON(hyakuyo);
-    const char* cstr = json.c_str();
+    char cstr[1000];
+    hyakuyoJSON(hyakuyo, cstr);
   
     String url = "/hyakuyobako/receive.php";
     url += "?data=" + URLEncode(cstr);
